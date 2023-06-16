@@ -8,9 +8,9 @@ import System.IO.Unsafe
 
 -- parsers para os tokens
 
-programToken = tokenPrim show update_pos get_token where
-  get_token (Program p) = Just (Program p)
-  get_token _           = Nothing
+--programToken = tokenPrim show update_pos get_token where
+--  get_token (Program p) = Just (Program p)
+--  get_token _           = Nothing
 
 idToken = tokenPrim show update_pos get_token where
   get_token (Id x p) = Just (Id x p)

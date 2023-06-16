@@ -8,17 +8,9 @@ import System.IO.Unsafe
 
 -- parsers para os tokens
 
---programToken = tokenPrim show update_pos get_token where
---  get_token (Program p) = Just (Program p)
---  get_token _           = Nothing
-
 idToken = tokenPrim show update_pos get_token where
   get_token (Id x p) = Just (Id x p)
   get_token _        = Nothing
-
-varToken = tokenPrim show update_pos get_token where
-  get_token (Var p) = Just (Var p)
-  get_token _       = Nothing  
 
 beginToken = tokenPrim show update_pos get_token where
   get_token (Begin p) = Just (Begin p)
@@ -32,10 +24,16 @@ semiColonToken :: ParsecT [Token] st IO (Token)
 semiColonToken = tokenPrim show update_pos get_token where
   get_token (SemiColon p) = Just (SemiColon p)
   get_token _             = Nothing
-
-colonToken = tokenPrim show update_pos get_token where
-  get_token (Colon p) = Just (Colon p)
-  get_token _         = Nothing
+  
+parLToken :: ParsecT [Token] st IO (Token)
+parLToken = tokenPrim show update_pos get_token where
+  get_token (ParL p) = Just (ParL p)
+  get_token _             = Nothing
+  
+parRToken :: ParsecT [Token] st IO (Token)
+parRToken = tokenPrim show update_pos get_token where
+  get_token (ParR p) = Just (ParR p)
+  get_token _             = Nothing
 
 assignToken = tokenPrim show update_pos get_token where
   get_token (Assign p) = Just (Assign p)
@@ -70,25 +68,27 @@ update_pos pos _ []      = pos
 
 program :: ParsecT [Token] [(Token,Token)] IO ([Token])
 program = do
-            a <- programToken 
-            b <- idToken 
-            c <- varToken
-            d <- varDecl
-            e <- beginToken 
-            f <- stmts
-            g <- endToken
+            a <- typeToken 
+            b <- idToken
+            c <- parLToken
+            d <- parRToken
+            e <- beginToken
+            f <- varDecl
+            g <- stmts
+            h <- endToken
+            i <- idToken
             eof
-            return (a:b:[c] ++ d++ [e] ++ f ++ [g])
-
+            return (a:b:[c] ++ [d] ++ [e] ++ f ++ g ++ [h] ++ [i])
+           
 varDecl :: ParsecT [Token] [(Token,Token)] IO([Token])
 varDecl = do
-            a <- idToken
-            b <- colonToken
-            c <- typeToken
-            updateState(symtable_insert (a, get_default_value c))
+            a <- typeToken
+            b <- idToken
+            c <- semiColonToken
+            updateState(symtable_insert (b, get_default_value a))
             s <- getState
             liftIO (print s)
-            return (a:b:[c])
+            return (b:[a])
 
 stmts :: ParsecT [Token] [(Token,Token)] IO([Token])
 stmts = do
@@ -129,8 +129,8 @@ get_type (Id id1 p1) ((Id id2 _, value):t) = if id1 == id2 then value
 compatible :: Token -> Token -> Bool
 compatible (Int _ _) (Int _ _) = True
 compatible (Float _ _) (Float _ _) = True
---compatible (Float _ _) (Int _ _) = True
---compatible (Int _ _) (Float _ _) = True
+compatible (Float _ _) (Int _ _) = True
+compatible (Int _ _) (Float _ _) = True
 compatible _ _ = False
 
 -- funções para o avaliador de expressões
@@ -188,8 +188,8 @@ symtable_remove (id1, v1) ((id2, v2):t) =
                                else (id2, v2) : symtable_remove (id1, v1) t                               
 
 -- função de conversão de Int para Float
---int_to_float :: Token -> Token
---int_to_float (Int x p) = (Float (fromIntegral x :: Float) p)
+int_to_float :: Token -> Token
+int_to_float (Int x p) = (Float (fromIntegral x :: Float) p)
 
 
 -- invocação do parser para o símbolo de partida 

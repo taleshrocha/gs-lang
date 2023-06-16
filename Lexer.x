@@ -14,19 +14,14 @@ tokens :-
 
   $white+                                ;
   "--".*                                 ;
-  --program                                { \p s -> Program (getLC p)}
-  --var                                    { \p s -> Var (getLC p)}
   begin                                  { \p s -> Begin (getLC p)}
   end                                    { \p s -> End (getLC p)}
-  --:                                      { \p s -> Colon (getLC p)}
   ";"                                    { \p s -> SemiColon (getLC p)}
+  "("                                    { \p s -> ParL (getLC p)}
+  ")"                                    { \p s -> ParR (getLC p)}
   int                                    { \p s -> Type s (getLC p)}
   float                                  { \p s -> Type s (getLC p)}
   :=                                     { \p s -> Assign (getLC p)}
-  --if                                     { \p s -> If (getLC p)}
-  --then                                   { \p s -> Then (getLC p)}
-  --write                                  { \p s -> Write (getLC p)}
-  -->                                      { \p s -> Greater (getLC p)}
   "+"                                    { \p s -> Add (getLC p)}
   "-"                                    { \p s -> Sub (getLC p)}
   $digit+                                { \p s -> Int (read s) (getLC p)}
@@ -39,17 +34,12 @@ tokens :-
 
 -- The token type:
 data Token =
-  --Program (Int, Int)    |
-  --Var (Int, Int)        |
-  --Begin (Int, Int)      |
-  --End (Int, Int)        |
-  --Colon (Int, Int)      |
+  Begin (Int, Int)      |
+  End (Int, Int)        |
   SemiColon (Int, Int)  |
-  Assign (Int, Int)     | 
-  --If (Int, Int)         |
-  --Then (Int, Int)       |
-  --Write (Int, Int)      |
-  --Greater (Int, Int)    |
+  ParL      (Int, Int)  |
+  ParR      (Int, Int)  |
+  Assign (Int, Int)     |
   Add (Int, Int)        |
   Sub (Int, Int)        |
   Type String (Int, Int)|

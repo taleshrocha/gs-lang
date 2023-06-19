@@ -16,6 +16,7 @@ tokens :-
   "--".*                                 ;
   begin                                  { \p s -> Begin (getLC p)}
   end                                    { \p s -> End (getLC p)}
+  main                                   { \p s -> Main (getLC p)}
   ";"                                    { \p s -> SemiColon (getLC p)}
   "("                                    { \p s -> ParL (getLC p)}
   ")"                                    { \p s -> ParR (getLC p)}
@@ -36,6 +37,7 @@ tokens :-
 data Token =
   Begin (Int, Int)      |
   End (Int, Int)        |
+  Main (Int, Int)       |
   SemiColon (Int, Int)  |
   ParL      (Int, Int)  |
   ParR      (Int, Int)  |

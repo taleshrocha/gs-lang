@@ -19,6 +19,11 @@ beginToken = tokenPrim show update_pos get_token where
 endToken = tokenPrim show update_pos get_token where
   get_token (End p) = Just (End p) 
   get_token _       = Nothing
+  
+mainToken :: ParsecT [Token] st IO (Token)
+mainToken = tokenPrim show update_pos get_token where
+  get_token (Main p) = Just (Main p)
+  get_token _             = Nothing
 
 semiColonToken :: ParsecT [Token] st IO (Token)
 semiColonToken = tokenPrim show update_pos get_token where
@@ -68,18 +73,41 @@ update_pos pos _ []      = pos
 
 program :: ParsecT [Token] [(Token,Token)] IO ([Token])
 program = do
+            a <- mainProgram
+            return a
+            
+function :: ParsecT [Token] [(Token,Token)] IO ([Token])
+function = do
             a <- typeToken 
             b <- idToken
             c <- parLToken
+            d <- params
+            e <- parRToken
+            f <- beginToken
+            g <- varDecl
+            h <- stmts
+            i <- endToken
+            j <- idToken
+            return (a:b:[c] ++ [e] ++ [f] ++ g ++ h ++ [i] ++ [j])
+            
+params :: ParsecT [Token] [(Token,Token)] IO ([Token])
+params = do
+          a <- varDecl
+	  return (a)
+
+mainProgram :: ParsecT [Token] [(Token,Token)] IO ([Token])
+mainProgram = do
+            a <- typeToken 
+            b <- mainToken
+            c <- parLToken
             d <- parRToken
             e <- beginToken
-            f <- varDecl
-            g <- stmts
-            h <- endToken
-            i <- idToken
+            f <- stmts
+            g <- endToken
+            h <- mainToken
             eof
-            return (a:b:[c] ++ [d] ++ [e] ++ f ++ g ++ [h] ++ [i])
-           
+            return (a:b:[c] ++ [d] ++ [e] ++ f ++ [g] ++ [h])
+
 varDecl :: ParsecT [Token] [(Token,Token)] IO([Token])
 varDecl = do
             a <- typeToken
@@ -92,20 +120,21 @@ varDecl = do
 
 stmts :: ParsecT [Token] [(Token,Token)] IO([Token])
 stmts = do
-          first <- assign
+          first <- assign <|> varDecl
           next <- remaining_stmts
           return (first ++ next)
 
 remaining_stmts :: ParsecT [Token] [(Token,Token)] IO([Token])
-remaining_stmts = (do a <- semiColonToken
-                      b <- assign
-                      return (a:b)) <|> (return [])
+remaining_stmts = (do a <- assign <|> varDecl
+                      b <- remaining_stmts
+                      return (a)) <|> (return [])
 
 assign :: ParsecT [Token] [(Token,Token)] IO([Token])
 assign = do
           a <- idToken
           b <- assignToken
           c <- expression
+          d <- semiColonToken
           s <- getState
           if (not (compatible (get_type a s) c)) then fail "type mismatch"
           else 

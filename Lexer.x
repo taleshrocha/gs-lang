@@ -25,6 +25,7 @@ tokens :-
   :=                                     { \p s -> Assign (getLC p)}
   "+"                                    { \p s -> Add (getLC p)}
   "-"                                    { \p s -> Sub (getLC p)}
+  "*"                                    { \p s -> Mult (getLC p)}
   $digit+                                { \p s -> Int (read s) (getLC p)}
   $digit+ ("." $digit+)?                 { \p s -> Float (read s) (getLC p)}
   $alpha [$alpha $digit \_ \']*          { \p s -> Id s (getLC p)}
@@ -44,6 +45,7 @@ data Token =
   Assign (Int, Int)     |
   Add (Int, Int)        |
   Sub (Int, Int)        |
+  Mult (Int, Int)       |
   Type String (Int, Int)|
   Id String (Int, Int)  |
   Int Int (Int, Int)    |

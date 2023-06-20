@@ -65,6 +65,10 @@ subToken = tokenPrim show update_pos get_token where
   get_token (Sub p) = Just (Sub p)
   get_token _       = Nothing 
 
+multToken = tokenPrim show update_pos get_token where
+  get_token (Mult p) = Just (Mult p)
+  get_token _       = Nothing 
+
 update_pos :: SourcePos -> Token -> [Token] -> SourcePos
 update_pos pos _ (tok:_) = pos -- necessita melhoria
 update_pos pos _ []      = pos  
@@ -134,11 +138,17 @@ assign = do
           a <- idToken
           b <- assignToken
           c <- expression
+          liftIO (print c)
           d <- semiColonToken
           s <- getState
           if (not (compatible (get_type a s) c)) then fail "type mismatch"
           else 
             do 
+              -- Recover target type
+              t <- get_type a s
+              -- Compare with expr type
+              --if(not (Int _ _) == t)
+              -- If necessary, change expression type
               updateState(symtable_update (a, c))
               s <- getState
               liftIO (print s)
@@ -155,6 +165,9 @@ get_type _ [] = error "variable not found"
 get_type (Id id1 p1) ((Id id2 _, value):t) = if id1 == id2 then value
                                              else get_type (Id id1 p1) t
 
+-- Use fromIntegral
+-- int2float
+
 compatible :: Token -> Token -> Bool
 compatible (Int _ _) (Int _ _) = True
 compatible (Float _ _) (Float _ _) = True
@@ -167,6 +180,7 @@ compatible _ _ = False
 expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 expression = try bin_expression <|> una_expression
 
+-- TODO: are we using this?
 una_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 una_expression = do
                    op <- addToken <|> subToken
@@ -182,7 +196,8 @@ bin_expression = do
 
 eval_remaining :: Token -> ParsecT [Token] [(Token,Token)] IO(Token)
 eval_remaining n1 = do
-                      op <- addToken <|> subToken
+                      op <- addToken <|> subToken 
+                                     <|> multToken
                       n2 <- intToken <|> floatToken
                       result <- eval_remaining (eval n1 op n2)
                       return (result) 
@@ -190,9 +205,14 @@ eval_remaining n1 = do
 
 eval :: Token -> Token -> Token -> Token
 eval (Int x p) (Add _ ) (Int y _) = Int (x + y) p
-eval (Int x p) (Sub _ ) (Int y _) = Int (x - y) p
 eval (Float x p) (Add _ ) (Float y _) = Float (x + y) p
+
+eval (Int x p) (Sub _ ) (Int y _) = Int (x - y) p
 eval (Float x p) (Sub _ ) (Float y _) = Float (x - y) p
+
+eval (Int x p) (Mult _ ) (Int y _) = Int (x * y) p
+eval (Float x p) (Mult _ ) (Float y _) = Float (x * y) p
+
 --eval (Float x p) (Add _ ) (Int y _) = Float (x + y) p
 --eval (Float x p) (Sub _ ) (Int y _) = Float (x - y) p
 --eval (Int x p) (Add _ ) (Float y _) = Float (x + y) p

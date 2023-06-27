@@ -195,18 +195,20 @@ una_expression = do
 --- funções considerando associatividade à esquerda                  
 bin_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 bin_expression = do
-                   n1 <- intToken <|> floatToken
-                   result <- eval_remaining n1
+                   n1 <- intToken <|> floatToken <|> idToken
+                   s <- getState
+                   result <- eval_remaining (get_type n1 s) <|> eval_remaining n1
                    return (result)
 
 eval_remaining :: Token -> ParsecT [Token] [(Token,Token)] IO(Token)
 eval_remaining n1 = do
+                      s <- getState
                       op <- addToken <|> subToken 
                                      <|> multToken
-                      n2 <- intToken <|> floatToken
-                      result <- eval_remaining (eval n1 op n2)
+                      n2 <- intToken <|> floatToken <|> idToken <|> return (n1)                              
+                      result <- eval_remaining (eval n1 op get_type n2 s)
+                                  <|> eval_remaining (eval n1 op n2)
                       return (result) 
-                    <|> return (n1)                              
 
 eval :: Token -> Token -> Token -> Token
 eval (Int x p) (Add _ ) (Int y _) = Int (x + y) p

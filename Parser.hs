@@ -97,7 +97,7 @@ function = do
 params :: ParsecT [Token] [(Token,Token)] IO ([Token])
 params = do
           a <- varDecl
-	  return (a)
+          return (a)
 
 mainProgram :: ParsecT [Token] [(Token,Token)] IO ([Token])
 mainProgram = do
@@ -145,9 +145,10 @@ assign = do
           else 
             do 
               -- Recover target type
-              t <- get_type a s
+              --t <- get_type a s
               -- Compare with expr type
-              --if(not (Int _ _) == t)
+              if (not (is_integer (get_type a s)) && ((is_integer (c))) ) then (int_to_float (c))
+              else fail "can't continue"
               -- If necessary, change expression type
               updateState(symtable_update (a, c))
               s <- getState
@@ -161,7 +162,7 @@ get_default_value (Type "int" (l, c)) = Int 0 (l, c)
 get_default_value (Type "float" (l, c)) = Float 0.0 (l, c)
 
 get_type :: Token -> [(Token, Token)] -> Token
-get_type _ [] = error "variable not found"
+get_type _ [] = error "variable not found" 
 get_type (Id id1 p1) ((Id id2 _, value):t) = if id1 == id2 then value
                                              else get_type (Id id1 p1) t
 
@@ -172,7 +173,7 @@ compatible :: Token -> Token -> Bool
 compatible (Int _ _) (Int _ _) = True
 compatible (Float _ _) (Float _ _) = True
 compatible (Float _ _) (Int _ _) = True
-compatible (Int _ _) (Float _ _) = True
+--compatible (Int _ _) (Float _ _) = True --Type mismatch
 compatible _ _ = False
 
 -- funções para o avaliador de expressões
@@ -238,7 +239,13 @@ symtable_remove (id1, v1) ((id2, v2):t) =
 
 -- função de conversão de Int para Float
 int_to_float :: Token -> Token
-int_to_float (Int x p) = (Float (fromIntegral x :: Float) p)
+int_to_float (Int x p) = Float (fromIntegral x) p
+
+
+-- função para teste
+is_integer :: Token -> Bool
+is_integer (Int _ _) = True
+is_integer _ = False
 
 
 -- invocação do parser para o símbolo de partida 

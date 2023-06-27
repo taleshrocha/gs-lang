@@ -149,7 +149,7 @@ assign = do
               -- Compare with expr type
               if (not (is_integer (get_type a s)) && ((is_integer (c))) ) 
                 then (updateState(symtable_update (a, int_to_float (c))))
-              else fail "can't continue"
+              else updateState(symtable_update (a, c))
               -- If necessary, change expression type
               --updateState(symtable_update (a, c))
               s <- getState

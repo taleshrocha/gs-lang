@@ -184,7 +184,7 @@ expression = try bin_expression <|> una_expression
 
 una_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 una_expression = do
-                   op <- addToken <|> subToken
+                   --op <- addToken <|> subToken
                    a <- intToken <|> floatToken <|> idToken
                    s <- getState
                    if (is_id a ) then

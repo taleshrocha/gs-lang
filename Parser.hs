@@ -147,7 +147,8 @@ assign = do
               -- Recover target type
               --t <- get_type a s
               -- Compare with expr type
-              if (not (is_integer (get_type a s)) && ((is_integer (c))) ) then (updateState(symtable_update (a, int_to_float (c))))
+              if (not (is_integer (get_type a s)) && ((is_integer (c))) ) 
+                then (updateState(symtable_update (a, int_to_float (c))))
               else fail "can't continue"
               -- If necessary, change expression type
               --updateState(symtable_update (a, c))
@@ -181,12 +182,15 @@ compatible _ _ = False
 expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 expression = try bin_expression <|> una_expression
 
--- TODO: are we using this?
 una_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 una_expression = do
                    op <- addToken <|> subToken
-                   a <- intToken <|> floatToken
-                   return (a)
+                   a <- intToken <|> floatToken <|> idToken
+                   s <- getState
+                   if (is_id a ) then
+                     return (get_type a s)
+                   else
+                     return (a)
    
 --- funções considerando associatividade à esquerda                  
 bin_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
@@ -246,6 +250,10 @@ int_to_float (Int x p) = Float (fromIntegral x) p
 is_integer :: Token -> Bool
 is_integer (Int _ _) = True
 is_integer _ = False
+
+is_id :: Token -> Bool
+is_id (Id _ _) = True
+is_id _ = False
 
 
 -- invocação do parser para o símbolo de partida 

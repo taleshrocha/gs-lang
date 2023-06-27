@@ -197,7 +197,7 @@ bin_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 bin_expression = do
                    n1 <- intToken <|> floatToken <|> idToken
                    s <- getState
-                   result <- eval_remaining (get_type n1 s) <|> eval_remaining n1
+                   result <- eval_remaining n1
                    return (result)
 
 eval_remaining :: Token -> ParsecT [Token] [(Token,Token)] IO(Token)
@@ -205,14 +205,20 @@ eval_remaining n1 = do
                       s <- getState
                       op <- addToken <|> subToken 
                                      <|> multToken
-                      n2 <- intToken <|> floatToken <|> idToken <|> return (n1)                              
-                      result <- eval_remaining (eval n1 op get_type n2 s)
-                                  <|> eval_remaining (eval n1 op n2)
+                      n2 <- intToken <|> floatToken <|> idToken                          
+                      result <- eval_remaining (eval n1 op n2)
                       return (result) 
+                    <|> return (n1)   
 
+--TODO Pass state to eval
 eval :: Token -> Token -> Token -> Token
 eval (Int x p) (Add _ ) (Int y _) = Int (x + y) p
 eval (Float x p) (Add _ ) (Float y _) = Float (x + y) p
+eval (Id x p) (Add _ ) (Int y q) = do
+                                      s <- getState
+                                      v <- get_type (Id x p) s
+                                      eval v Add (Int y q)
+
 
 eval (Int x p) (Sub _ ) (Int y _) = Int (x - y) p
 eval (Float x p) (Sub _ ) (Float y _) = Float (x - y) p

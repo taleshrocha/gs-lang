@@ -147,10 +147,10 @@ assign = do
               -- Recover target type
               --t <- get_type a s
               -- Compare with expr type
-              if (not (is_integer (get_type a s)) && ((is_integer (c))) ) then (int_to_float (c))
+              if (not (is_integer (get_type a s)) && ((is_integer (c))) ) then (updateState(symtable_update (a, int_to_float (c))))
               else fail "can't continue"
               -- If necessary, change expression type
-              updateState(symtable_update (a, c))
+              --updateState(symtable_update (a, c))
               s <- getState
               liftIO (print s)
               return (a:b:[c])

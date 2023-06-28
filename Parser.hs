@@ -119,7 +119,6 @@ varDecl = do
             c <- semiColonToken
             updateState(symtable_insert (b, get_default_value a))
             s <- getState
-            liftIO (print s)
             return (b:[a])
 
 stmts :: ParsecT [Token] [(Token,Token)] IO([Token])
@@ -133,28 +132,28 @@ remaining_stmts = (do a <- assign <|> varDecl
                       b <- remaining_stmts
                       return (a)) <|> (return [])
 
-assign :: ParsecT [Token] [(Token,Token)] IO([Token])
+assign :: ParsecT [Token] [(Token,Token)] IO [Token]
 assign = do
-          a <- idToken
-          b <- assignToken
-          c <- expression
-          liftIO (print c)
-          d <- semiColonToken
-          s <- getState
-          if (not (compatible (get_type a s) c)) then fail "type mismatch"
-          else 
-            do 
-              -- Recover target type
-              --t <- get_type a s
-              -- Compare with expr type
-              if (not (is_integer (get_type a s)) && ((is_integer (c))) ) 
-                then (updateState(symtable_update (a, int_to_float (c))))
-              else updateState(symtable_update (a, c))
-              -- If necessary, change expression type
-              --updateState(symtable_update (a, c))
-              s <- getState
-              liftIO (print s)
-              return (a:b:[c])
+  a <- idToken
+  b <- assignToken
+  c <- expression
+  d <- semiColonToken
+  s <- getState
+  liftIO $ do
+    putStr "Compatible: "
+    print (get_type a s)
+    putStr " -- "
+    print c
+  if (not (compatible (get_type a s) c)) then 
+    fail "type mismatch"
+  else do 
+    -- Compare with expr type
+    if (not (is_integer (get_type a s)) && ((is_integer (c)))) then 
+      updateState(symtable_update (a, int_to_float (c)))
+    else 
+      updateState(symtable_update (a, c))
+    --s <- getState
+    return (a:b:[c])
 
 -- funções para verificação de tipos
 
@@ -182,49 +181,57 @@ compatible _ _ = False
 expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 expression = try bin_expression <|> una_expression
 
-una_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
+una_expression :: ParsecT [Token] [(Token,Token)] IO Token
 una_expression = do
-                   --op <- addToken <|> subToken
-                   a <- intToken <|> floatToken <|> idToken
-                   s <- getState
-                   if (is_id a ) then
-                     return (get_type a s)
-                   else
-                     return (a)
+  --op <- addToken <|> subToken
+  a <- intToken <|> floatToken <|> idToken
+  s <- getState
+  if (is_id a ) then
+    return (get_type a s)
+  else
+    return (a)
    
 --- funções considerando associatividade à esquerda                  
 bin_expression :: ParsecT [Token] [(Token,Token)] IO(Token)
 bin_expression = do
-                   n1 <- intToken <|> floatToken <|> idToken
-                   s <- getState
-                   result <- eval_remaining n1
-                   return (result)
+  n1 <- intToken <|> floatToken <|> idToken
+  s <- getState
+  result <- eval_remaining n1
+  return (result)
 
-eval_remaining :: Token -> ParsecT [Token] [(Token,Token)] IO(Token)
+eval_remaining :: Token -> ParsecT [Token] [(Token, Token)] IO Token
 eval_remaining n1 = do
-                      s <- getState
-                      op <- addToken <|> subToken 
-                                     <|> multToken
-                      n2 <- intToken <|> floatToken <|> idToken                          
-                      result <- eval_remaining (eval n1 op n2)
-                      return (result) 
-                    <|> return (n1)   
+  op <- addToken <|> subToken <|> multToken
+  n2 <- intToken <|> floatToken <|> idToken
+  result <- eval n1 op n2
+  eval_remaining result <|> return n1
 
---TODO Pass state to eval
-eval :: Token -> Token -> Token -> Token
-eval (Int x p) (Add _ ) (Int y _) = Int (x + y) p
-eval (Float x p) (Add _ ) (Float y _) = Float (x + y) p
-eval (Id x p) (Add _ ) (Int y q) = do
-                                      s <- getState
-                                      v <- get_type (Id x p) s
-                                      eval v Add (Int y q)
+eval :: Token -> Token -> Token -> ParsecT [Token] [(Token, Token)] IO Token
+eval (Int x p) (Add _) (Int y _) = return $ Int (x + y) p
 
+eval (Float x p) (Add _) (Float y _) = return $ Float (x + y) p
 
-eval (Int x p) (Sub _ ) (Int y _) = Int (x - y) p
-eval (Float x p) (Sub _ ) (Float y _) = Float (x - y) p
+eval (Int x p) (Sub _) (Int y _) = return $ Int (x - y) p
+eval (Float x p) (Sub _) (Float y _) = return $ Float (x - y) p
 
-eval (Int x p) (Mult _ ) (Int y _) = Int (x * y) p
-eval (Float x p) (Mult _ ) (Float y _) = Float (x * y) p
+eval (Int x p) (Mult _) (Int y _) = return $ Int (x * y) p
+eval (Float x p) (Mult _) (Float y _) = return $ Float (x * y) p
+
+eval (Id x p) (Add _) (Int y _) = do
+  -- Use `get_type` to retrieve the value of the first argument
+  state <- getState
+  let value = case get_type (Id x p) state of
+                Float f _ -> f
+                Int n _ -> fromIntegral n -- convert integer to float if necessary
+  
+  liftIO $ do
+    putStrLn "Token:"
+    print (Id x p)
+    putStrLn "Value:"
+    print value
+  
+  -- Return a modified `Int` token
+  return $ Int (round value + y) p
 
 --eval (Float x p) (Add _ ) (Int y _) = Float (x + y) p
 --eval (Float x p) (Sub _ ) (Int y _) = Float (x - y) p

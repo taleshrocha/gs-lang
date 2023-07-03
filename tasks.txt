@@ -1,6 +1,0 @@
-- Type check don't work
-  float z;
-  z := 2;
-[(Id "x" (2,9),Float 0.0 (2,3)),(Id "y" (3,9),Float 0.0 (3,3)),(Id "c" (4,7),Int 0 (4,3)),(Id "z" (5,9),Int 2 (6,8))]
-
-

@@ -5,98 +5,98 @@ import Tokens
 import Memory
 import Data.Bits
 
-eval :: Token -> Token -> Token -> Token
-eval (Int x p) (Add _) (Int y _) = Int (x + y) p
-eval (Float x p) (Add _) (Float y _) = Float (x + y) p
-eval (Int x p) (Add _) (Float y _) = Float ((fromIntegral x) + y) p
-eval (Float x p) (Add _) (Int y _) = Float (x + (fromIntegral y)) p
+eval :: Types -> Token -> Types -> Types
+eval (IntType x) (Add _) (IntType y) = IntType (x + y)
+eval (FloatType x) (Add _) (FloatType y) = FloatType (x + y)
+eval (IntType x) (Add _) (FloatType y) = FloatType (fromIntegral x + y)
+eval (FloatType x) (Add _) (IntType y) = FloatType (x + fromIntegral y)
 
-eval (Int x p) (Sub _) (Int y _) = Int (x - y) p
-eval (Float x p) (Sub _) (Float y _) = Float (x - y) p
-eval (Int x p) (Sub _) (Float y _) = Float ((fromIntegral x) - y) p
-eval (Float x p) (Sub _) (Int y _) = Float (x - (fromIntegral y)) p
+eval (IntType x) (Sub _) (IntType y) = IntType (x - y)
+eval (FloatType x) (Sub _) (FloatType y) = FloatType (x - y)
+eval (IntType x) (Sub _) (FloatType y) = FloatType (fromIntegral x - y)
+eval (FloatType x) (Sub _) (IntType y) = FloatType (x - fromIntegral y)
 
-eval (Int x p) (Mult _) (Int y _) = Int (x * y) p
-eval (Float x p) (Mult _) (Float y _) = Float (x * y) p
-eval (Int x p) (Mult _) (Float y _) = Float ((fromIntegral x) * y) p
-eval (Float x p) (Mult _) (Int y _) = Float (x * (fromIntegral y)) p
+eval (IntType x) (Mult _) (IntType y) = IntType (x * y)
+eval (FloatType x) (Mult _) (FloatType y) = FloatType (x * y)
+eval (IntType x) (Mult _) (FloatType y) = FloatType (fromIntegral x * y)
+eval (FloatType x) (Mult _) (IntType y) = FloatType (x * fromIntegral y)
 
-eval (Int x p) (Div _) (Int y _) = Int (x `quot` y) p
-eval (Float x p) (Div _) (Float y _) = Float (x / y) p
-eval (Int x p) (Div _) (Float y _) = Float ((fromIntegral x) / y) p
-eval (Float x p) (Div _) (Int y _) = Float (x / (fromIntegral y)) p
+eval (IntType x) (Div _) (IntType y)
+  | y /= 0 = IntType (x `quot` y)
+  | otherwise = error "Error: division by zero!"
+eval (FloatType x) (Div _) (FloatType y)
+  | y /= 0.0 = FloatType (x / y)
+  | otherwise = error "Error: division by zero!"
+eval (IntType x) (Div _) (FloatType y) = FloatType (fromIntegral x / y)
+eval (FloatType x) (Div _) (IntType y)
+  | y /= 0 = FloatType (x / fromIntegral y)
+  | otherwise = error "Error: division by zero!"
 
-eval _ (Div _) (Int 0 _) = error ("Error: division by zero!")
-eval _ (Div _) (Float 0.0 _) = error ("Error: division by zero!")
+eval _ (Div _) (IntType 0) = error "Error: division by zero!"
+eval _ (Div _) (FloatType 0.0) = error "Error: division by zero!"
 
-eval (Int x p) (Power _) (Int y _) = Int (x ^ y) p
-eval (Float x p) (Power _) (Float y _) = Float (x ** y) p
-eval (Int x p) (Power _) (Float y _) = Float ((fromIntegral x) ** y) p
-eval (Float x p) (Power _) (Int y _) = Float (x ** (fromIntegral(y))) p
+eval (IntType x) (Power _) (IntType y) = IntType (x ^ y)
+eval (FloatType x) (Power _) (FloatType y) = FloatType (x ** y)
+eval (IntType x) (Power _) (FloatType y) = FloatType (fromIntegral x ** y)
+eval (FloatType x) (Power _) (IntType y) = FloatType (x ** fromIntegral y)
 
-eval (Int x p) (Mod _) (Int y _) = Int (x `mod` y) p
+eval (IntType x) (Mod _) (IntType y) = IntType (x `mod` y)
 
-eval _ (Mod _) (Int 0 _) = error ("Error: division by zero!")
-eval _ (Mod _) (Float 0.0 _) = error ("Error: division by zero!")
+eval _ (Mod _) (IntType 0) = error "Error: division by zero!"
+eval _ (Mod _) (FloatType 0.0) = error "Error: division by zero!"
 
-eval (Bool x p) (LogicAnd _) (Bool y _) = Bool (x && y) p
-eval (Bool x p) (LogicOr _) (Bool y _) = Bool (x || y) p
-eval (Bool x p) (LogicXor _) (Bool y _) = Bool (x `xor` y) p
+eval (BoolType x) (LogicAnd _) (BoolType y) = BoolType (x && y)
+eval (BoolType x) (LogicOr _) (BoolType y) = BoolType (x || y)
+eval (BoolType x) (LogicXor _) (BoolType y) = BoolType (x `xor` y)
 
-eval (Int x p) (Equals _) (Int y _) = Bool (x == y) p
-eval (Float x p) (Equals _) (Float y _) = Bool (x == y) p
-eval (Int x p) (Equals _) (Float y _) = Bool ((fromIntegral x) == y) p
-eval (Float x p) (Equals _) (Int y _) = Bool (x == (fromIntegral y)) p
-eval (Bool x p) (Equals _) (Bool y _) = Bool (x == y) p
-eval (Char x p) (Equals _) (Char y _) = Bool (x == y) p
-eval (String x p) (Equals _) (String y _) = Bool (x == y) p
+eval (IntType x) (Equals _) (IntType y) = BoolType (x == y)
+eval (FloatType x) (Equals _) (FloatType y) = BoolType (x == y)
+eval (IntType x) (Equals _) (FloatType y) = BoolType (fromIntegral x == y)
+eval (FloatType x) (Equals _) (IntType y) = BoolType (x == fromIntegral y)
+eval (BoolType x) (Equals _) (BoolType y) = BoolType (x == y)
+eval (CharType x) (Equals _) (CharType y) = BoolType (x == y)
+eval (StringType x) (Equals _) (StringType y) = BoolType (x == y)
 
-eval (Int x p) (Different _) (Int y _) = Bool (x /= y) p
-eval (Float x p) (Different _) (Float y _) = Bool (x /= y) p
-eval (Int x p) (Different _) (Float y _) = Bool ((fromIntegral x) /= y) p
-eval (Float x p) (Different _) (Int y _) = Bool (x /= (fromIntegral y)) p
-eval (Bool x p) (Different _) (Bool y _) = Bool (x /= y) p
-eval (Char x p) (Different _) (Char y _) = Bool (x /= y) p
-eval (String x p) (Different _) (String y _) = Bool (x /= y) p
+eval (IntType x) (Different _) (IntType y) = BoolType (x /= y)
+eval (FloatType x) (Different _) (FloatType y) = BoolType (x /= y)
+eval (IntType x) (Different _) (FloatType y) = BoolType (fromIntegral x /= y)
+eval (FloatType x) (Different _) (IntType y) = BoolType (x /= fromIntegral y)
+eval (BoolType x) (Different _) (BoolType y) = BoolType (x /= y)
+eval (CharType x) (Different _) (CharType y) = BoolType (x /= y)
+eval (StringType x) (Different _) (StringType y) = BoolType (x /= y)
 
-eval (Int x p) (Greater _) (Int y _) = Bool (x > y) p
-eval (Float x p) (Greater _) (Float y _) = Bool (x > y) p
-eval (Int x p) (Greater _) (Float y _) = Bool ((fromIntegral x) > y) p
-eval (Float x p) (Greater _) (Int y _) = Bool (x > (fromIntegral y)) p
-eval (Char x p) (Greater _) (Char y _) = Bool (x > y) p
-eval (String x p) (Greater _) (String y _) = Bool (x > y) p
+eval (IntType x) (Greater _) (IntType y) = BoolType (x > y)
+eval (FloatType x) (Greater _) (FloatType y) = BoolType (x > y)
+eval (IntType x) (Greater _) (FloatType y) = BoolType (fromIntegral x > y)
+eval (FloatType x) (Greater _) (IntType y) = BoolType (x > fromIntegral y)
+eval (CharType x) (Greater _) (CharType y) = BoolType (x > y)
+eval (StringType x) (Greater _) (StringType y) = BoolType (x > y)
 
-eval (Int x p) (GreaterOrEqual _) (Int y _) = Bool (x >= y) p
-eval (Float x p) (GreaterOrEqual _) (Float y _) = Bool (x >= y) p
-eval (Int x p) (GreaterOrEqual _) (Float y _) = Bool ((fromIntegral x) >= y) p
-eval (Float x p) (GreaterOrEqual _) (Int y _) = Bool (x >= (fromIntegral y)) p
-eval (Char x p) (GreaterOrEqual _) (Char y _) = Bool (x >= y) p
-eval (String x p) (GreaterOrEqual _) (String y _) = Bool (x >= y) p
+eval (IntType x) (GreaterOrEqual _) (IntType y) = BoolType (x >= y)
+eval (FloatType x) (GreaterOrEqual _) (FloatType y) = BoolType (x >= y)
+eval (IntType x) (GreaterOrEqual _) (FloatType y) = BoolType (fromIntegral x >= y)
+eval (FloatType x) (GreaterOrEqual _) (IntType y) = BoolType (x >= fromIntegral y)
+eval (CharType x) (GreaterOrEqual _) (CharType y) = BoolType (x >= y)
+eval (StringType x) (GreaterOrEqual _) (StringType y) = BoolType (x >= y)
 
-eval (Int x p) (Less _) (Int y _) = Bool (x < y) p
-eval (Float x p) (Less _) (Float y _) = Bool (x < y) p
-eval (Int x p) (Less _) (Float y _) = Bool ((fromIntegral x) < y) p
-eval (Float x p) (Less _) (Int y _) = Bool (x < (fromIntegral y)) p
-eval (Char x p) (Less _) (Char y _) = Bool (x < y) p
-eval (String x p) (Less _) (String y _) = Bool (x < y) p
+eval (IntType x) (Less _) (IntType y) = BoolType (x < y)
+eval (FloatType x) (Less _) (FloatType y) = BoolType (x < y)
+eval (IntType x) (Less _) (FloatType y) = BoolType (fromIntegral x < y)
+eval (FloatType x) (Less _) (IntType y) = BoolType (x < fromIntegral y)
+eval (CharType x) (Less _) (CharType y) = BoolType (x < y)
+eval (StringType x) (Less _) (StringType y) = BoolType (x < y)
 
-eval (Int x p) (LessOrEqual _) (Int y _) = Bool (x <= y) p
-eval (Float x p) (LessOrEqual _) (Float y _) = Bool (x <= y) p
-eval (Int x p) (LessOrEqual _) (Float y _) = Bool ((fromIntegral x) <= y) p
-eval (Float x p) (LessOrEqual _) (Int y _) = Bool (x <= (fromIntegral y)) p
-eval (Char x p) (LessOrEqual _) (Char y _) = Bool (x <= y) p
-eval (String x p) (LessOrEqual _) (String y _) = Bool (x <= y) p
+eval (IntType x) (LessOrEqual _) (IntType y) = BoolType (x <= y)
+eval (FloatType x) (LessOrEqual _) (FloatType y) = BoolType (x <= y)
+eval (IntType x) (LessOrEqual _) (FloatType y) = BoolType (fromIntegral x <= y)
+eval (FloatType x) (LessOrEqual _) (IntType y) = BoolType (x <= fromIntegral y)
+eval (CharType x) (LessOrEqual _) (CharType y) = BoolType (x <= y)
+eval (StringType x) (LessOrEqual _) (StringType y) = BoolType (x <= y)
 
-eval _ _ _ = error("Error on Evaluation -- eval: type error!")
-
+eval _ _ _ = error "Error on eval -- cannot match types!"
 
 evaluateExpression :: [Token] -> Memory -> Types
-evaluateExpression t m = IntType 0
---getType token (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show token ++ ") *in this scope*!")
---
---getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, funcs, types, isExecOn) =
---  if id1 == id2 && currentScope == scope2 then type2
---  else getType (Id id1 pos1) (currentScope, scopes, tail, funcs, types, isExecOn)
---
---getType (Int value pos) _ = IntType value
---getType (Float value pos) _ = FloatType value
+evaluateExpression  [] _ = error("Error on evaluateExpression -- No expression!")
+evaluateExpression  (op : []) m = getType op m
+evaluateExpression  (op1 : s : op2 : t) m = eval (getType op1 m) s (getType op2 m)
+

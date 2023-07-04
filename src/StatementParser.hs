@@ -52,6 +52,8 @@ printFun = do
   a <- printToken
   pl <- parLToken
   exp <- expression
+  liftIO $ putStrLn "EXPRESSION: "
+  liftIO $ print exp
   pr <- parRToken
   c <- semicolonToken
   s <- getState

@@ -10,10 +10,15 @@ import Text.Parsec
 import Control.Monad.IO.Class
 
 parser :: [Token] -> IO (Either ParseError [Token])
-parser tokens = runParserT program ("--", [], [], [], True) "Error message" tokens
+parser tokens = runParserT program ("--", [], [], [], [], False) "Error message" tokens
 
 program :: ParsecT [Token] Memory IO ([Token])
 program = do
+            a <- mainProgram
+            return a
+
+mainProgram :: ParsecT [Token] Memory IO ([Token])
+mainProgram = do
             t <- typeToken 
             m1 <- mainToken 
             updateState( insertScope "main" )

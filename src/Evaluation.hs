@@ -86,4 +86,4 @@ eval (Float x p) (LessOrEqual _) (Int y _) = Bool (x <= (fromIntegral y)) p
 eval (Char x p) (LessOrEqual _) (Char y _) = Bool (x <= y) p
 eval (String x p) (LessOrEqual _) (String y _) = Bool (x <= y) p
 
-eval _ _ _ = error("Error: type error!")
+eval _ _ _ = error("Error on Evaluation -- eval: type error!")

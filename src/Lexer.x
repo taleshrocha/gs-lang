@@ -46,6 +46,7 @@ tokens :-
   "]"                                            { \p s -> BracketR (getLC p) }
 
   -- Type Tokens
+  "typedef"                                      { \p s -> TypeDef s (getLC p) }
   int                                            { \p s -> Type s (getLC p) }
   float                                          { \p s -> Type s (getLC p) }
   bool                                           { \p s -> Type s (getLC p) }
@@ -79,8 +80,8 @@ tokens :-
 
   $digit+                                        { \p s -> Int (read s)  (getLC p) }
   $digit+ ("." $digit+)?                         { \p s -> Float (read s)  (getLC p) }
-  true                                           { \p s -> Bool (read s) (getLC p) }
-  false                                          { \p s -> Bool (read s) (getLC p) }
+  True                                           { \p s -> Bool (read s) (getLC p) }
+  False                                          { \p s -> Bool (read s) (getLC p) }
   \'.\'                                          { \p s -> Char (read s)  (getLC p) }
   $alpha [$alpha $digit \_ \']*                  { \p s -> Id s  (getLC p) }
   \" $alpha [$alpha $digit ! \_ \']* \"          { \p s -> String s (getLC p) }
@@ -119,6 +120,7 @@ data Token =
   BracketL        (Int, Int) |
   BracketR        (Int, Int) |
 
+  TypeDef String  (Int, Int) |
   Type String     (Int, Int) |
   Int  Int        (Int, Int) |
   Float Float     (Int, Int) |

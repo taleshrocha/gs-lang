@@ -6,6 +6,8 @@ import Control.Monad.IO.Class
 
 import System.IO.Unsafe
 
+-- Parsers para os Tokens
+
 beginToken :: ParsecT [Token] st IO(Token)
 beginToken = tokenPrim show update_pos get_token where
   get_token (Begin p) = Just (Begin p)
@@ -220,7 +222,6 @@ equalsToken = tokenPrim show update_pos get_token where
   get_token (Equals p) = Just (Equals p)
   get_token _ = Nothing
 
--- make diferenceToken
 differentToken :: ParsecT [Token] st IO(Token)
 differentToken = tokenPrim show update_pos get_token where
   get_token (Different p) = Just (Different p)

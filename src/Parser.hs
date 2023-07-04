@@ -14,19 +14,19 @@ parser tokens = runParserT program ("--", [], [], [], [], False) "Error message"
 
 program :: ParsecT [Token] Memory IO ([Token])
 program = do
-            a <- mainProgram
-            return a
+  a <- mainProgram
+  return a
 
 mainProgram :: ParsecT [Token] Memory IO ([Token])
 mainProgram = do
-            t <- typeToken 
-            m1 <- mainToken 
-            updateState( insertScope "main" )
-            pl <- parLToken
-            pr <- parRToken
-            b <- beginToken
-            s <- stmts
-            e <- endToken
-            m2 <- mainToken 
-            eof
-            return (t:m1:pl:pr:b:s ++ e:[m2])
+  t <- typeToken 
+  m1 <- mainToken 
+  updateState( insertScope "main" )
+  pl <- parLToken
+  pr <- parRToken
+  b <- beginToken
+  s <- stmts
+  e <- endToken
+  m2 <- mainToken 
+  eof
+  return (t:m1:pl:pr:b:s ++ e:[m2])

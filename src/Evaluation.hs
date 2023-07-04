@@ -2,6 +2,7 @@ module Evaluation where
 
 import Lexer
 import Tokens
+import Memory
 import Data.Bits
 
 eval :: Token -> Token -> Token -> Token
@@ -87,3 +88,15 @@ eval (Char x p) (LessOrEqual _) (Char y _) = Bool (x <= y) p
 eval (String x p) (LessOrEqual _) (String y _) = Bool (x <= y) p
 
 eval _ _ _ = error("Error on Evaluation -- eval: type error!")
+
+
+evaluateExpression :: [Token] -> Memory -> Types
+evaluateExpression t m = IntType 0
+--getType token (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show token ++ ") *in this scope*!")
+--
+--getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, funcs, types, isExecOn) =
+--  if id1 == id2 && currentScope == scope2 then type2
+--  else getType (Id id1 pos1) (currentScope, scopes, tail, funcs, types, isExecOn)
+--
+--getType (Int value pos) _ = IntType value
+--getType (Float value pos) _ = FloatType value

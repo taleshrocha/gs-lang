@@ -1,6 +1,9 @@
 int main() begin
-  int x;
-  print(x);
-  x := 2.0;
-  print(x);
+  float x;
+  float y;
+  int c;
+
+  print(y);
+  print(c);
+  print(y + c);
 end main

@@ -33,9 +33,9 @@ insertVariableOnMem var (currentScope, scopes, varTable, funcTable, typeTable, i
 insertVariable :: Variable -> [Variable] -> [Variable]
 insertVariable var [] = [var]
 
-insertVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, True) : tail) =
-  if id1 == id2 then error ("Error on Memory -- insertVariable: variable already declared!")
-  else (id2, scope2, type2, True) : insertVariable (id1, scope1, type1, isConst1) tail
+insertVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : tail) =
+  if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- insertVariable: variable (" ++ show (id1, scope1, type1, isConst1) ++") already declared *in this scope*!")
+  else (id2, scope2, type2, isConst2) : insertVariable (id1, scope1, type1, isConst1) tail
 
 -- For Functions -----------------------
 
@@ -63,14 +63,20 @@ updateVarOnMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn) 
   (currentScope, scopes, updateVariable var varTable, funcTable, typeTable, isOn)
 
 updateVariable :: Variable -> [Variable] -> [Variable]
-updateVariable _ [] = error ("Error on Memory -- updateVariable: variable not declared!")
+updateVariable var [] = error ("Error on Memory -- updateVariable: variable (" ++ show var ++ ") not declared!")
 
 updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, True) : tail) =
-  if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- updateVariable: trying to change the value of a constant!")
+  if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- updateVariable: trying to change the value of the " ++ show (id2, scope2, type2, True) ++ " constant!")
   else (id2, scope2, type2, True) : updateVariable (id1, scope1, type1, isConst1) tail
 
 updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, False) : tail) =
-  if id1 == id2 && scope1 == scope2 then (id1, scope1, type1, True) : tail
+  if id1 == id2 && scope1 == scope2 then
+    if compatible type1 type2 then (id1, scope1, type1, True) : tail
+    else error ("Error on Memory -- updateVariable: variable " 
+      ++ show (id1, scope1, type1, isConst1) 
+      ++ " is not compatible with Type " 
+      ++ show type2
+      ++ ".")
   else (id2, scope2, type2, True) : updateVariable (id1, scope1, type1, isConst1) tail
 
 -- Removes --------------------------------------------------------------------
@@ -89,11 +95,14 @@ removeVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : 
 ---- Getters ------------------------------------------------------------------
 
 getType :: Token -> Memory -> Types
-getType _ (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared *in this scope*!")
+getType token (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show token ++ ") *in this scope*!")
 
 getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, funcs, types, isExecOn) =
   if id1 == id2 && currentScope == scope2 then type2
   else getType (Id id1 pos1) (currentScope, scopes, tail, funcs, types, isExecOn)
+
+getType (Int value pos) _ = IntType value
+getType (Float value pos) _ = FloatType value
 
 getDefaultValue :: Token -> Types
 getDefaultValue (Type "int" (l, c)) = IntType 0
@@ -138,25 +147,26 @@ getIsVariableConst (_, _, _, isConst) = isConst
 
 -- Misc -----------------------------------------------------------------------
 
-compatible :: Token -> Token -> Bool
-compatible (Int _ _) (Int _ _) = True
-compatible (Float _ _) (Float _ _) = True
-compatible (Bool _ _) (Bool _ _) = True
-compatible (Char _ _) (Char _ _) = True
-compatible (String _ _) (String _ _) = True
+compatible :: Types -> Types -> Bool
+compatible (IntType _) (IntType _) = True
+compatible (FloatType _) (FloatType _) = True
+compatible (BoolType _) (BoolType _) = True
+compatible (CharType _) (CharType _) = True
+compatible (StringType _) (StringType _) = True
 
-compatible (Float _ _) (Int _ _) = True
-compatible (Int _ _) (Float _ _) = True
+compatible (FloatType _) (IntType _) = False
+compatible (IntType _) (FloatType _) = True
 
 compatible _ _ = error ("Error on Memory -- compatible: type mismatch!")
 
 -- Show --------------------------------
 
 instance Show Types where
-  show (IntType value) = show value
-  show (FloatType value) = show value
-  show (BoolType value) = show value
-  show (CharType value) = show value
-  show (StringType value) = show value
-  show (RecordType (name, fields)) = show (name, fields)
-  show (ArrayType (name, maxSize, currentSize, load)) = show (name, maxSize, currentSize, load)
+  show (IntType value) = "(IntType, " ++ show value ++ ")"
+  show (FloatType value) = "(FloatType, " ++ show value ++ ")"
+  show (BoolType value) = "(BoolType, " ++ show value ++ ")"
+  show (CharType value) = "(CharType, " ++ show value ++ ")"
+  show (StringType value) = "(StringType, " ++ show value ++ ")"
+  show (RecordType (name, fields)) = "(RecordType, " ++ show (name, fields) ++ ")"
+  show (ArrayType (name, maxSize, currentSize, load)) =
+    "(ArrayType, " ++ show (name, maxSize, currentSize, load) ++ ")"

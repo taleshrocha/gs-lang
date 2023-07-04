@@ -7,6 +7,7 @@ import Memory
 import Text.Parsec
 import Control.Monad.IO.Class
 import System.IO.Unsafe
+import Text.Printf (printf)
 
 stmts :: ParsecT [Token] Memory IO [Token]
 stmts = try (do
@@ -21,19 +22,19 @@ stmts = try (do
 
 varDecl :: ParsecT [Token] Memory IO [Token]
 varDecl = do
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
   t <- typeToken
   (Id name p) <- idToken
   e <- semicolonToken
   s <- getState
   modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
   s <- getState
-  liftIO $ putStr "varDecl: "
   liftIO $ print s
-  liftIO $ putStr "\n"
   return (t : (Id name p) : [e])
 
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "assign"
   (Id name p) <- idToken
   b <- assignToken
   c <- expression
@@ -41,13 +42,12 @@ assign = do
   s <- getState
   updateState (updateVarOnMem (name, getCurrentScope s, getType c s, False))
   s <- getState
-  liftIO $ putStr "assign: "
   liftIO $ print s
-  liftIO $ putStr "\n"
   return ((Id name p) : b : c : [d])
 
 printFun :: ParsecT [Token] Memory IO [Token]
 printFun = do
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
   a <- printToken
   pl <- parLToken
   exp <- expression
@@ -55,7 +55,7 @@ printFun = do
   c <- semicolonToken
   s <- getState
   let expType = getType exp s
-  liftIO $ putStrLn $ "printFun: " ++ show expType ++ "\n"
+  liftIO $ putStrLn $ show expType
   return (a : pl : exp : pr : [c])
 
 scanFun :: ParsecT [Token] Memory IO [Token]

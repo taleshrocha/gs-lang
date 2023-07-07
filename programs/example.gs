@@ -1,9 +1,4 @@
 int main() begin
-  float x;
-  float y;
-  int c;
-
-  print(y);
-  print(c);
-  print(y + c);
+  int x;
+  print(6 / 2 + 5**2);
 end main

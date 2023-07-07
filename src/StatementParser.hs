@@ -38,26 +38,25 @@ assign = do
   liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "assign"
   (Id name p) <- idToken
   b <- assignToken
-  exp <- expression
+  exp <- expressions
   d <- semicolonToken
   s <- getState
-  updateState (updateVarOnMem (name, getCurrentScope s, evaluateExpression exp s, False))
+  updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
   s <- getState
   liftIO $ print s
-  return ((Id name p) : b : exp ++ [d])
+  return ((Id name p) : b : exp : [d])
 
 printFun :: ParsecT [Token] Memory IO [Token]
 printFun = do
   liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
   a <- printToken
   pl <- parLToken
-  exp <- expression
+  exp <- expressions
   pr <- parRToken
   c <- semicolonToken
   s <- getState
-  let expType = evaluateExpression exp s
-  liftIO $ putStrLn $ show expType
-  return (a : pl : exp ++ pr : [c])
+  liftIO $ putStrLn $ show (getType exp s)
+  return (a : pl : exp : pr : [c])
 
 scanFun :: ParsecT [Token] Memory IO [Token]
 scanFun = do
@@ -71,30 +70,30 @@ ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do
   f <- ifToken
   pl <- parLToken
-  exp <- expression
+  exp <- expressions
   pr <- parRToken
   st <- stmts
   et <- endToken
   eit <- ifToken
-  return (f : pl : exp ++ pr : st ++ [eit] ++ [eit])
+  return (f : pl : exp : pr : st ++ [eit] ++ [eit])
 
 returnExp :: ParsecT [Token] Memory IO [Token]
 returnExp = do
   a <- returnToken
-  exp <- expression
+  exp <- expressions
   c <- semicolonToken
-  return (a : exp ++ [c])
+  return (a : exp : [c])
 
 argsList :: ParsecT [Token] Memory IO [Token]
 argsList = (do
-    exp <- expression
+    exp <- expressions
     b <- commaToken
     c <- argsList
-    return (exp ++ b : c))
+    return (exp : b : c))
   <|> (do
-    a <- expression
+    a <- expressions
     b <- argsList
-    return (a ++ b))
+    return (a : b))
   <|> return []
 
 functionCall :: ParsecT [Token] Memory IO [Token]
@@ -111,144 +110,56 @@ whileStatement :: ParsecT [Token] Memory IO [Token]
 whileStatement = do
   f <- whileToken
   a <- parLToken
-  exp <- expression
+  exp <- expressions
   c <- parRToken
   st <- stmts
   et <- endToken
   ew <- whileToken
-  return (f : a : exp ++ c : st ++ [et] ++ [ew])
+  return (f : a : exp : c : st ++ [et] ++ [ew])
 
 -------- Expressions ----------------------------------------------------------
 
--- 1st Precedence -------------------------------------------------------------
 
-term1 :: ParsecT [Token] Memory IO [Token]
-term1 = try binTerm1 <|> unaTerm1
-
-unaTerm1 :: ParsecT [Token] Memory IO [Token]
-unaTerm1 = do
-  op <- powerToken <|> addUnaryToken
-  a <- intToken <|> boolToken <|> floatToken <|> stringToken <|> idToken
-  return (op : [a])
-
-binTerm1 :: ParsecT [Token] Memory IO [Token]
-binTerm1 = (do
-    n1 <- intToken <|> boolToken <|> floatToken <|> stringToken <|> idToken
-    result <- evalTerm1
-    return (n1 : result))
-  <|> (do
-    --n1 <- try listLiteral <|> matrixLiteral <|> parenExpr
-    result <- evalTerm1
-    --return (n1 ++ result))
-    return (result))
-
-evalTerm1 :: ParsecT [Token] Memory IO [Token]
-evalTerm1 = (do
-    op <- powerToken <|> addUnaryToken
-    n2 <- intToken <|> boolToken <|> floatToken <|> stringToken <|> idToken
-    result <- evalTerm1
-    return (op : n2 : result)
-  <|> return [])
-
--- 2nd Precedence -------------------------------------------------------------
-
-term2 :: ParsecT [Token] Memory IO [Token]
-term2 = try binTerm2 <|> unaTerm2
-
-unaTerm2 :: ParsecT [Token] Memory IO [Token]
-unaTerm2 = do
-  op <- multToken <|> divToken <|> modToken
-  a <- term1
-  return (op : a)
-
-binTerm2 :: ParsecT [Token] Memory IO [Token]
-binTerm2 = do
-  n1 <- term1
-  result <- evalTerm2
-  return (n1 ++ result)
-
-evalTerm2 :: ParsecT [Token] Memory IO [Token]
-evalTerm2 = (do
-    op <- multToken <|> divToken <|> modToken
-    n2 <- term1
-    result <- evalTerm2
-    return (op : n2 ++ result))
-  <|> return []
-
--- 3rd Precedence -------------------------------------------------------------
-
-term3 :: ParsecT [Token] Memory IO [Token]
-term3 = try binTerm3 <|> unaTerm3
-
-unaTerm3 :: ParsecT [Token] Memory IO [Token]
-unaTerm3 = do
+expressions :: ParsecT [Token] Memory IO Token
+expressions = try (do 
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expressions"
+  ex <- term
   op <- addToken <|> subToken
-  a <- term2
-  return (op : a)
+  trm <- term
+  return (eval ex op trm)
+  ) <|> (do
+  trm <- term
+  return trm)
 
-binTerm3 :: ParsecT [Token] Memory IO [Token]
-binTerm3 = do
-  n1 <- term2
-  result <- evalTerm2
-  return (n1 ++ result)
+term :: ParsecT [Token] Memory IO Token
+term = try (do 
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term"
+  trm <- factor
+  op <- multToken <|> divToken
+  fctr <- factor
+  return (eval trm op fctr)
+  ) <|> (do
+  fct <- factor
+  return fct)
 
-evalTerm3 :: ParsecT [Token] Memory IO [Token]
-evalTerm3 = do
-  op <- addToken <|> subToken
-  n2 <- term3
-  result <- evalTerm3
-  return (op : n2 ++ result)
-  <|> return []
+factor :: ParsecT [Token] Memory IO Token
+factor = try (do 
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "factor"
+  ex <- expression
+  op <- powerToken
+  fctr <- expression
+  return (eval ex op fctr)
+  ) <|> (do
+  xpr <- expression
+  return xpr)
 
--- 4th Precedence -------------------------------------------------------------
-
-term4 :: ParsecT [Token] Memory IO [Token]
-term4 = try binTerm4 <|> unaTerm4
-
-unaTerm4 :: ParsecT [Token] Memory IO [Token]
-unaTerm4 = do
-  op <- equalsToken <|> differentToken <|> greaterToken <|> lessToken <|> greaterOrEqualToken <|> lessOrEqualToken
-  a <- term3
-  return (op : a)
-
-binTerm4 :: ParsecT [Token] Memory IO [Token]
-binTerm4 = do
-  n1 <- term3
-  result <- evalTerm4
-  return (n1 ++ result)
-
-evalTerm4 :: ParsecT [Token] Memory IO [Token]
-evalTerm4 = do
-  op <- equalsToken <|> differentToken <|> greaterToken <|> lessToken <|> greaterOrEqualToken <|> lessOrEqualToken
-  n2 <- term3
-  result <- evalTerm4
-  return (op : n2 ++ result)
-  <|> return []
-
--- 5th Precedence -------------------------------------------------------------
-
-expression :: ParsecT [Token] Memory IO [Token]
-expression = try binExpression <|> unaExpression 
-
-unaExpression :: ParsecT [Token] Memory IO [Token]
-unaExpression = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "unaExpression"
-  exp <- intToken <|> floatToken <|> idToken
-  return [exp]
-
-binExpression :: ParsecT [Token] Memory IO [Token]
-binExpression = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "binExpression"
-  exp <- intToken <|> floatToken <|> idToken
-  result <- evalRemaining
-  return (exp : result)
-
-evalRemaining :: ParsecT [Token] Memory IO [Token]
-evalRemaining = do
-    --op <- logicAndToken <|> logicOrToken <|> logicXorToken
-    liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "evalRemaining"
-    op <- addToken
-    exp <- intToken <|> floatToken <|> idToken
-    result <- evalRemaining
-    return (op : exp : result)
-  <|> return []
+expression :: ParsecT [Token] Memory IO Token
+expression = try (do 
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expression"
+  pl <- parLToken
+  ex <- expression
+  pr <- parRToken
+  return ex
+  ) <|> (do
+  id <- idToken <|> intToken <|> floatToken
+  return id)

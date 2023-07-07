@@ -23,19 +23,19 @@ stmts = try (do
 
 varDecl :: ParsecT [Token] Memory IO [Token]
 varDecl = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
   t <- typeToken
   (Id name p) <- idToken
   e <- semicolonToken
   s <- getState
   modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
   s <- getState
-  liftIO $ print s
+  --liftIO $ print s
   return (t : (Id name p) : [e])
 
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "assign"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "assign"
   (Id name p) <- idToken
   b <- assignToken
   exp <- expressions
@@ -43,12 +43,12 @@ assign = do
   s <- getState
   updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
   s <- getState
-  liftIO $ print s
+  --liftIO $ print s
   return ((Id name p) : b : exp : [d])
 
 printFun :: ParsecT [Token] Memory IO [Token]
 printFun = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
   a <- printToken
   pl <- parLToken
   exp <- expressions
@@ -92,14 +92,25 @@ scanFun = do
 
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "ifStatement"
   f <- ifToken
   pl <- parLToken
   exp <- expressions
   pr <- parRToken
-  st <- stmts
-  et <- endToken
-  eit <- ifToken
-  return (f : pl : exp : pr : st ++ [eit] ++ [eit])
+  s <- getState
+  let val = getBoolValue exp
+  if(val) then 
+    do
+      st <- stmts
+      et <- endToken
+      eit <- ifToken
+      return (f : pl : exp : pr : st ++ [et] ++ [eit])
+  else 
+    do 
+      st <- stmts
+      et <- endToken
+      eit <- ifToken
+      return []
 
 returnExp :: ParsecT [Token] Memory IO [Token]
 returnExp = do
@@ -143,10 +154,9 @@ whileStatement = do
 
 -------- Expressions ----------------------------------------------------------
 
-
 expressions :: ParsecT [Token] Memory IO Token
 expressions = try (do 
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expressions"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expressions"
   trm1f <- term1
   op <- logicAndToken <|> logicOrToken <|> logicXorToken
   trm1l <- term1
@@ -157,7 +167,7 @@ expressions = try (do
 
 term1 :: ParsecT [Token] Memory IO Token
 term1 = try (do 
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term1"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term1"
   trm2f <- term2
   op <- addToken <|> subToken
   trm2l <- term2
@@ -168,7 +178,7 @@ term1 = try (do
 
 term2 :: ParsecT [Token] Memory IO Token
 term2 = try (do 
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term2"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term2"
   trm <- factor
   op <- multToken <|> divToken
   fctr <- factor
@@ -179,7 +189,7 @@ term2 = try (do
 
 factor :: ParsecT [Token] Memory IO Token
 factor = try (do 
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "factor"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "factor"
   ex <- expression
   op <- powerToken
   fctr <- expression
@@ -190,7 +200,7 @@ factor = try (do
 
 expression :: ParsecT [Token] Memory IO Token
 expression = try (do 
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expression"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expression"
   pl <- parLToken
   ex <- expression
   pr <- parRToken

@@ -113,6 +113,10 @@ getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
 
+getBoolValue :: Token -> Bool
+getBoolValue (Bool value pos) = value
+getBoolValue _ = error ("Error on Memory -- getBoolValue")
+
 -- For Type Memory ---------------------
 
 getCurrentScope :: Memory -> Scope

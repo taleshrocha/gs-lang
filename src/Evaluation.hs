@@ -8,6 +8,7 @@ import Data.Bits
 eval :: Token -> Token -> Token -> Token
 eval (Int x p) (Add _) (Int y _) = Int (x + y) p
 eval (Float x p) (Add _) (Float y _) = Float (x + y) p
+eval (String x p) (Add _) (String y _) = String (x ++ y) p
 eval (Int x p) (Add _) (Float y _) = Float ((fromIntegral x) + y) p
 eval (Float x p) (Add _) (Int y _) = Float (x + (fromIntegral y)) p
 
@@ -87,4 +88,4 @@ eval (Float x p) (LessOrEqual _) (Int y _) = Bool (x <= (fromIntegral y)) p
 eval (Char x p) (LessOrEqual _) (Char y _) = Bool (x <= y) p
 eval (String x p) (LessOrEqual _) (String y _) = Bool (x <= y) p
 
-eval _ _ _ = error("Error on Evaluation -- eval: type error!")
+eval t1 op t2 = error("Error on Evaluation -- eval: type error! Can't perform operation: " ++ show t1 ++ " " ++ show op ++ " " ++ show t2 ++ ".")

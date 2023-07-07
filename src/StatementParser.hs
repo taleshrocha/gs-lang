@@ -47,8 +47,16 @@ assign = do
   return ((Id name p) : b : exp : [d])
 
 printFun :: ParsecT [Token] Memory IO [Token]
-printFun = do
+printFun = try (do
   liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
+  a <- printToken
+  pl <- parLToken
+  exp <- expressions
+  cmm <- commaToken
+  prt <- printRemaining
+  s <- getState
+  liftIO $ putStrLn $ show (getType exp s)
+  return (a : pl : exp : cmm : prt)) <|> (do
   a <- printToken
   pl <- parLToken
   exp <- expressions
@@ -56,7 +64,23 @@ printFun = do
   c <- semicolonToken
   s <- getState
   liftIO $ putStrLn $ show (getType exp s)
-  return (a : pl : exp : pr : [c])
+  return (a : pl : exp : pr : [c]))
+
+printRemaining :: ParsecT [Token] Memory IO [Token]
+printRemaining = try (do
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printRemaining"
+  exp <- expressions
+  cmm <- commaToken
+  prt <- printRemaining
+  s <- getState
+  liftIO $ putStrLn $ show (getType exp s)
+  return (exp : cmm : prt)) <|> (do
+  exp <- expressions
+  pr <- parRToken
+  c <- semicolonToken
+  s <- getState
+  liftIO $ putStrLn $ show (getType exp s)
+  return (exp : pr : [c]))
 
 scanFun :: ParsecT [Token] Memory IO [Token]
 scanFun = do

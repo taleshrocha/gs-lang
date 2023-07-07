@@ -1,3 +1,3 @@
 int main() begin
-  print("Bom dia casada");
+  print("True and False", True and False);
 end main

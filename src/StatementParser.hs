@@ -123,17 +123,28 @@ whileStatement = do
 expressions :: ParsecT [Token] Memory IO Token
 expressions = try (do 
   liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expressions"
-  ex <- term
-  op <- addToken <|> subToken
-  trm <- term
-  return (eval ex op trm)
+  trm1f <- term1
+  op <- logicAndToken <|> logicOrToken <|> logicXorToken
+  trm1l <- term1
+  return (eval trm1f op trm1l)
   ) <|> (do
-  trm <- term
-  return trm)
+  trm1 <- term1
+  return trm1)
 
-term :: ParsecT [Token] Memory IO Token
-term = try (do 
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term"
+term1 :: ParsecT [Token] Memory IO Token
+term1 = try (do 
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term1"
+  trm2f <- term2
+  op <- addToken <|> subToken
+  trm2l <- term2
+  return (eval trm2f op trm2l)
+  ) <|> (do
+  trm2 <- term2
+  return trm2)
+
+term2 :: ParsecT [Token] Memory IO Token
+term2 = try (do 
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term2"
   trm <- factor
   op <- multToken <|> divToken
   fctr <- factor
@@ -161,5 +172,5 @@ expression = try (do
   pr <- parRToken
   return ex
   ) <|> (do
-  id <- idToken <|> intToken <|> floatToken
+  id <- idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken
   return id)

@@ -84,7 +84,8 @@ tokens :-
   False                                          { \p s -> Bool (read s) (getLC p) }
   \'.\'                                          { \p s -> Char (read s)  (getLC p) }
   $alpha [$alpha $digit \_ \']*                  { \p s -> Id s  (getLC p) }
-  \" $alpha [$alpha $digit ! \_ \']* \"          { \p s -> String s (getLC p) }
+  -- \" $alpha [$alpha $digit ! \_ \']* \"          { \p s -> String s (getLC p) }
+  \".*\"          { \p s -> String s (getLC p) }
 
 {
 -- Each action has type :: AlexPosn -> String -> Token

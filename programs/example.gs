@@ -1,4 +1,4 @@
 int main() begin
   int x;
-  print(6 / 2 + 5**2);
+  print(True and False);
 end main

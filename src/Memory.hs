@@ -95,7 +95,7 @@ removeVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : 
 ---- Getters ------------------------------------------------------------------
 
 getType :: Token -> Memory -> Types
-getType token (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show token ++ ") *in this scope*!")
+getType (Id id pos) (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show (Id id pos) ++ ") *in this scope*!")
 
 getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, funcs, types, isExecOn) =
   if id1 == id2 && currentScope == scope2 then type2
@@ -103,6 +103,8 @@ getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, fun
 
 getType (Int value pos) _ = IntType value
 getType (Float value pos) _ = FloatType value
+getType (Bool value pos) _ = BoolType value
+getType (String value pos) _ = StringType value
 
 getDefaultValue :: Token -> Types
 getDefaultValue (Type "int" (l, c)) = IntType 0

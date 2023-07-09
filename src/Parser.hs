@@ -8,6 +8,7 @@ import StatementParser
 
 import Text.Parsec
 import Control.Monad.IO.Class
+import Data.IntMap (update)
 
 parser :: [Token] -> IO (Either ParseError [Token])
 parser tokens = runParserT program ("--", [], [], [], [], False) "Error message" tokens
@@ -25,6 +26,7 @@ mainProgram = do
   pl <- parLToken
   pr <- parRToken
   b <- beginToken
+  updateState setExecOnOff
   s <- stmts
   e <- endToken
   m2 <- mainToken 

@@ -3,8 +3,8 @@ int main() begin
   float y;
   int c;
 
-  y := 2.0;
-  c := 2;
+  y := 2.0 + 5;
+  c := 2 + 3;
   print(y);
   print(c);
   print(y + c);

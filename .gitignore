@@ -22,7 +22,4 @@ cabal.project.local~
 .HTF/
 .ghc.environment.*
 Lexer.hs
-Parser
-Lexer.hs
-Parser
-bin/
+Main

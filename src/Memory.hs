@@ -50,6 +50,8 @@ insertFunction (id1, return1, params1, body1) ((id2, return2, params2, body2) : 
   if id1 == id2 then error ("Error: function already exists!")
   else (id2, return2, params2, body2) : insertFunction (id1, return1, params1, body1) tail
 
+-- For Scope -----------------------
+
 insertScope :: Scope -> Memory -> Memory
 insertScope scope (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
   (scope, scope : scopes, varTable, funcTable, typeTable, isOn)

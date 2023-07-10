@@ -20,8 +20,6 @@ idTokenToTypeToken (Id id p) scope ((id2, scope2, type2, is_const) : tail) =
         _ -> error "Error on Evaluation -- idTokenToTypeToken: invalid variable type!"
   else idTokenToTypeToken (Id id p) scope tail
 
-eval _ _ _ = error "Error on eval -- cannot match types!"
-
 eval :: Memory -> Token -> Token -> Token -> Token
 eval mem (Id id1 p1) opToken (Id id2 p2) = eval mem (idTokenToTypeToken (Id id1 p1) (getCurrentScope mem) (getVariables mem)) opToken (idTokenToTypeToken (Id id2 p2) (getCurrentScope mem) (getVariables mem))
 eval mem (Id id p) opToken typeToken = eval mem (idTokenToTypeToken (Id id p) (getCurrentScope mem) (getVariables mem)) opToken typeToken

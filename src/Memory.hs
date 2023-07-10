@@ -19,7 +19,7 @@ data Types =
   BoolType Bool                           |
   CharType Char                           |
   StringType String                       |
-  RecordType (String, [(String, Types)])  |
+  RecordType (String, [(Types, String)])  |
   ArrayType (String, Int, Int, [Types])  -- name, maxSize, currentSize, load
 
 -- Inserts --------------------------------------------------------------------
@@ -49,6 +49,26 @@ insertFunction func [] = [func]
 insertFunction (id1, return1, params1, body1) ((id2, return2, params2, body2) : tail) =
   if id1 == id2 then error "Error: function already exists!"
   else (id2, return2, params2, body2) : insertFunction (id1, return1, params1, body1) tail
+
+-- For types -----------------------
+
+insertTypeOnMem :: Types -> Memory -> Memory
+insertTypeOnMem userType (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, varTable, funcTable, insertType userType typeTable, isOn)
+
+insertType :: Types -> [Types] -> [Types]
+insertType userType [] = [userType]
+insertType (RecordType (id1, fields1)) ((RecordType (id2, fields2)) : tail) =
+  if id1 == id2 then error "Error: record already exists!"
+  else (RecordType (id2, fields2)) : insertType (RecordType (id1, fields1)) tail
+
+--insertFields :: String -> (Types, String) -> Memory -> Memory
+--insertFields id1 (type1, name1) (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+--  if id1 == id2 then ((RecordType (id2, fields2)) : tail)
+--  else (RecordType (id2, fields2)) : insertType (RecordType (id1, fields1)) tail
+
+
+  --then error "Error: record " ++ id1 ++ ", " ++ fields1 ++ " already exists!"
 
 -- For Scope -----------------------
 

@@ -28,12 +28,15 @@ functionToken = tokenPrim show update_pos get_token where
   get_token (Function p) = Just (Function p)
   get_token _ = Nothing
 
+recordToken :: ParsecT [Token] st IO Token
+recordToken = tokenPrim show update_pos get_token where
+  get_token (Record p) = Just (Record p)
+  get_token _ = Nothing
+
 procedureToken :: ParsecT [Token] st IO Token
 procedureToken = tokenPrim show update_pos get_token where
   get_token (Procedure p) = Just (Procedure p)
   get_token _ = Nothing
-
-
 
 constToken :: ParsecT [Token] st IO Token
 constToken = tokenPrim show update_pos get_token where

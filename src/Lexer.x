@@ -19,6 +19,7 @@ tokens :-
   main                                           { \p s -> Main  (getLC p) }
   function                                       { \p s -> Function (getLC p) }
   procedure                                      { \p s -> Procedure (getLC p) }
+  record                                         { \p s -> Record (getLC p) }
 
   const                                          { \p s -> Const (getLC p) }
   return                                         { \p s -> Return (getLC p) }
@@ -93,9 +94,10 @@ tokens :-
 data Token =
   Begin           (Int, Int) |
   End             (Int, Int) |
-  Main         (Int, Int) |
+  Main            (Int, Int) |
   Function        (Int, Int) |
   Procedure       (Int, Int) |
+  Record          (Int, Int) |
 
   Const           (Int, Int) |
   Return          (Int, Int) |

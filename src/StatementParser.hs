@@ -109,15 +109,31 @@ scanFun :: ParsecT [Token] Memory IO [Token]
 scanFun = do
   a <- scanToken
   pl <- parLToken
+  --(Id name p) <- idToken
   b <- idToken
+  --(Id name p) <- b
   pr <- parRToken
   c <- semicolonToken
   s <- getState
-  v <- liftIO getLine
+  --v <- liftIO $ getLine
   -- liftIO $ printf "\n%-20s%-10s\n" (show (typeOf value)) (show value)
   if getIsExecOn s then (do
-    v <- liftIO getLine
-    return (a : pl : b : pr : [c])) else return []
+    v <- liftIO $ getLine
+    updateState (updateVarOnMem ((getName b), getCurrentScope s, (turnType (getType b s) v), False))
+    return (a : pl : pr : [c])) else return []
+
+
+getName :: Token -> String
+getName (Id name _) = name
+
+
+turnType :: Types -> String -> Types
+turnType (IntType _) s = (IntType (read s))
+turnType (FloatType _) s = (FloatType (read s))
+turnType (BoolType _) s = (BoolType (read s))
+turnType (CharType _) s = (CharType (read s))
+turnType (StringType _) s = (StringType s)
+
 
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do

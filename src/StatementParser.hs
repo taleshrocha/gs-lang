@@ -231,7 +231,7 @@ factor :: ParsecT [Token] Memory IO Token
 factor = try (do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "factor"
   ex <- expT
-  op <- powerToken
+  op <- powerToken <|> addUnaryToken
   s <- getState
   eval s ex op <$> factor
   ) <|> expT
@@ -243,4 +243,10 @@ expT = try (do
   ex <- exprs
   pr <- parRToken
   return ex
-  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken
+  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken <|> arrayToken
+  
+--arrayDec :: ParsecT [Token] Memory IO Token
+--arrayDec = try (do
+--  bl <- bracketLToken
+--  br <- bracketRToken
+--  return ([]))

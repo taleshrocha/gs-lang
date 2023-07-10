@@ -20,7 +20,7 @@ data Types =
   CharType Char                           |
   StringType String                       |
   RecordType (String, [(String, Types)])  |
-  ArrayType (String, Int, Int, [Types])  -- name, maxSize, currentSize, load
+  ArrayType (String, Int, Int, [Float]) -- name, maxSize, currentSize, load (String, Int, Int, [Float])
 
 -- Inserts --------------------------------------------------------------------
 
@@ -112,6 +112,7 @@ getType (Int value pos) _ = IntType value
 getType (Float value pos) _ = FloatType value
 getType (Bool value pos) _ = BoolType value
 getType (String value pos) _ = StringType value
+getType (Array value pos) _ = ArrayType ("", 2, 0, value)
 
 getDefaultValue :: Token -> Types
 getDefaultValue (Type "int" (l, c)) = IntType 0
@@ -119,6 +120,7 @@ getDefaultValue (Type "float" (l, c)) = FloatType 0.0
 getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
+getDefaultValue (Type "array" (l, c)) = ArrayType ("", 2, 0, []) --Temporary getDefaultValue 
 
 getBoolValue :: Token -> Bool
 getBoolValue (Bool value pos) = value
@@ -169,6 +171,7 @@ compatible (FloatType _) (FloatType _) = True
 compatible (BoolType _) (BoolType _) = True
 compatible (CharType _) (CharType _) = True
 compatible (StringType _) (StringType _) = True
+compatible (ArrayType _) (ArrayType _) = True
 
 compatible (FloatType _) (IntType _) = True
 compatible (IntType _) (FloatType _) = False

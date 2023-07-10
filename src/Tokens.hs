@@ -168,6 +168,10 @@ stringToken = tokenPrim show update_pos get_token where
   get_token (String x p) = Just (String x p)
   get_token _       = Nothing
 
+arrayToken :: ParsecT [Token] st IO Token
+arrayToken = tokenPrim show update_pos get_token where
+  get_token (Array x p) = Just (Array x p)
+  get_token _       = Nothing
 
 
 assignToken :: ParsecT [Token] st IO Token

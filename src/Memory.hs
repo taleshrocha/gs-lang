@@ -47,7 +47,7 @@ insertFunction :: Function -> [Function] -> [Function]
 insertFunction func [] = [func]
 
 insertFunction (id1, return1, params1, body1) ((id2, return2, params2, body2) : tail) =
-  if id1 == id2 then error ("Error: function already exists!")
+  if id1 == id2 then error "Error: function already exists!"
   else (id2, return2, params2, body2) : insertFunction (id1, return1, params1, body1) tail
 
 -- For Scope -----------------------
@@ -67,19 +67,17 @@ updateVarOnMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn) 
 updateVariable :: Variable -> [Variable] -> [Variable]
 updateVariable var [] = error ("Error on Memory -- updateVariable: variable (" ++ show var ++ ") not declared!")
 
-updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, True) : tail) =
-  if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- updateVariable: trying to change the value of the " ++ show (id2, scope2, type2, True) ++ " constant!")
-  else (id2, scope2, type2, True) : updateVariable (id1, scope1, type1, isConst1) tail
-
-updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, False) : tail) =
+updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : tail) =
   if id1 == id2 && scope1 == scope2 then
-    if compatible type1 type2 then (id1, scope1, type1, True) : tail
-    else error ("Error on Memory -- updateVariable: variable " 
-      ++ show (id1, scope1, type1, isConst1) 
-      ++ " is not compatible with Type " 
-      ++ show type2
-      ++ ".")
-  else (id2, scope2, type2, True) : updateVariable (id1, scope1, type1, isConst1) tail
+    if isConst2 == True then error ("Error on Memory -- updateVariable: trying to change the value of the " ++ show (id2, scope2, type2, True) ++ " constant!")
+    else
+      if compatible type2 type1 then (id1, scope1, convertTypes type1 type2, isConst2) : tail
+      else error ("Error on Memory -- updateVariable: variable "
+        ++ show (id2, scope2, type2, False)
+        ++ " is not compatible with Type "
+        ++ show type1
+        ++ ".")
+  else (id2, scope2, type2, isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
 
 -- Removes --------------------------------------------------------------------
 
@@ -96,8 +94,15 @@ removeVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : 
 
 ---- Getters ------------------------------------------------------------------
 
+getVariable :: String -> String -> [Variable] -> Variable
+getVariable var sc [] = error ("Error on Memory -- getVariable: variable (" ++ show var ++ ") not declared in " ++ sc ++ " scope!")
+
+getVariable id scope ((id2, scope2, type2, is_const) : tail) =
+  if id == id2 && scope == scope2 then (id2, scope2, type2, is_const)
+  else getVariable id scope tail
+
 getType :: Token -> Memory -> Types
-getType token (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show token ++ ") *in this scope*!")
+getType (Id id pos) (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show (Id id pos) ++ ") *in this scope*!")
 
 getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, funcs, types, isExecOn) =
   if id1 == id2 && currentScope == scope2 then type2
@@ -105,6 +110,8 @@ getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, fun
 
 getType (Int value pos) _ = IntType value
 getType (Float value pos) _ = FloatType value
+getType (Bool value pos) _ = BoolType value
+getType (String value pos) _ = StringType value
 
 getDefaultValue :: Token -> Types
 getDefaultValue (Type "int" (l, c)) = IntType 0
@@ -112,6 +119,10 @@ getDefaultValue (Type "float" (l, c)) = FloatType 0.0
 getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
+
+getBoolValue :: Token -> Bool
+getBoolValue (Bool value pos) = value
+getBoolValue _ = error "Error on Memory -- getBoolValue"
 
 -- For Type Memory ---------------------
 
@@ -132,6 +143,9 @@ getTypes (_, _, _, _, typeTable, _) = typeTable
 
 getIsExecOn :: Memory -> Bool
 getIsExecOn (_, _, _, _, _, isExecOn) = isExecOn
+
+setExecOnOff :: Memory -> Memory
+setExecOnOff (currentScope, scopes, varTable, funcTable, typeTable, isExecOn) = (currentScope, scopes, varTable, funcTable, typeTable, not isExecOn)
 
 -- For Type Variable -------------------
 
@@ -156,10 +170,14 @@ compatible (BoolType _) (BoolType _) = True
 compatible (CharType _) (CharType _) = True
 compatible (StringType _) (StringType _) = True
 
-compatible (FloatType _) (IntType _) = False
-compatible (IntType _) (FloatType _) = True
+compatible (FloatType _) (IntType _) = True
+compatible (IntType _) (FloatType _) = False
 
-compatible _ _ = error ("Error on Memory -- compatible: type mismatch!")
+compatible _ _ = error "Error on Memory -- compatible: type mismatch!"
+
+convertTypes :: Types -> Types -> Types
+convertTypes (IntType v) (FloatType _) = FloatType (fromIntegral v)
+convertTypes type1 _ = type1
 
 -- Show --------------------------------
 

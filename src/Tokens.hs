@@ -173,6 +173,10 @@ arrayToken = tokenPrim show update_pos get_token where
   get_token (Array x p) = Just (Array x p)
   get_token _       = Nothing
 
+matrixToken :: ParsecT [Token] st IO Token
+matrixToken = tokenPrim show update_pos get_token where
+  get_token (Array x p) = Just (Array x p)
+  get_token _       = Nothing
 
 assignToken :: ParsecT [Token] st IO Token
 assignToken = tokenPrim show update_pos get_token where

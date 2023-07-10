@@ -243,7 +243,7 @@ expT = try (do
   ex <- exprs
   pr <- parRToken
   return ex
-  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken <|> arrayToken
+  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken <|> arrayToken <|> matrixToken
   
 --arrayDec :: ParsecT [Token] Memory IO Token
 --arrayDec = try (do

@@ -53,6 +53,7 @@ tokens :-
   char                                           { \p s -> Type s (getLC p) }
   string                                         { \p s -> Type s (getLC p) }
   array                                          { \p s -> Type s (getLC p) }
+  matrix                                         { \p s -> Type s (getLC p) }
 
   -- Op Tokens
   ":="                                           { \p s -> Assign (getLC p) }
@@ -130,6 +131,7 @@ data Token =
   Char Char       (Int, Int) |
   String  String  (Int, Int) |
   Array [Float]   (Int, Int) |
+  Matrix [[Float]](Int, Int) |
 
   Assign          (Int, Int) | 
   Add             (Int, Int) | 

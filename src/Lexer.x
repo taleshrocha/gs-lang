@@ -130,8 +130,8 @@ data Token =
   Bool Bool       (Int, Int) |
   Char Char       (Int, Int) |
   String  String  (Int, Int) |
-  Array [Float]   (Int, Int) |
-  Matrix [[Float]](Int, Int) |
+  Array           (Int, Int) |
+  Matrix          (Int, Int) |
 
   Assign          (Int, Int) | 
   Add             (Int, Int) | 

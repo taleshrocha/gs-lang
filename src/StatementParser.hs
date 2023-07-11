@@ -27,7 +27,8 @@ stmts = try (do
 varDecl :: ParsecT [Token] Memory IO [Token]
 varDecl = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
-  t <- typeToken
+  t <- typeToken 
+  a <- optionMaybe arrayDec
   (Id name p) <- idToken
   b <- optionMaybe assignToken
   case b of
@@ -43,13 +44,25 @@ varDecl = do
         return (t : Id name p : b : exp : [e])) else return []
 
     Nothing -> do
-      e <- semicolonToken
-      s <- getState
-      if getIsExecOn s then (do
-        modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
-        s <- getState
-        --liftIO $ print s
-        return (t : Id name p : [e])) else return []
+      case a of
+        Just a -> do
+          e <- semicolonToken
+          s <- getState
+          if getIsExecOn s then (do
+            modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+            s <- getState
+            updateState (updateVarOnMem (name, getCurrentScope s, getType a s, False))
+            --liftIO $ print s
+            return (t : Id name p : a : [e])) else return []
+        Nothing -> do
+          e <- semicolonToken
+          s <- getState
+          if getIsExecOn s then (do
+            modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+            s <- getState
+            --liftIO $ print s
+            return (t : Id name p : [e])) else return []
+    
 
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do
@@ -243,10 +256,11 @@ expT = try (do
   ex <- exprs
   pr <- parRToken
   return ex
-  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken <|> arrayToken <|> matrixToken
+  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken-- <|> arrayToken <|> matrixToken
   
---arrayDec :: ParsecT [Token] Memory IO Token
---arrayDec = try (do
---  bl <- bracketLToken
---  br <- bracketRToken
---  return ([]))
+arrayDec :: ParsecT [Token] Memory IO Token
+arrayDec = try (do
+  bl <- bracketLToken
+  t <- typeToken
+  br <- bracketRToken
+  return (t))

@@ -17,8 +17,8 @@ idTokenToTypeToken (Id id p) scope ((id2, scope2, type2, is_const) : tail) =
         (BoolType x) -> Bool x p
         (CharType x) -> Char x p
         (StringType x) -> String x p
-        (ArrayType (a, b, c, value)) -> Array value p
-        (MatrixType x) -> Matrix x p
+        (ArrayType (a, b, c, value)) -> Array p
+        (MatrixType x) -> Matrix p
         _ -> error "Error on Evaluation -- idTokenToTypeToken: invalid variable type!"
   else idTokenToTypeToken (Id id p) scope tail
 
@@ -112,9 +112,13 @@ eval _ (Float x p) (LessOrEqual _) (Int y _) = Bool (x <= fromIntegral y) p
 eval _ (Char x p) (LessOrEqual _) (Char y _) = Bool (x <= y) p
 eval _ (String x p) (LessOrEqual _) (String y _) = Bool (x <= y) p
 
-eval _ (Array [] p) (AddUnary _) (Float y _) = Array ([y]) p
-eval _ (Array a p) (AddUnary _) (Float y _) = Array (a ++ [y]) p
-eval _ (Matrix [] p) (AddUnary _) (Array x _) = Matrix ([x]) p
-eval _ (Matrix m p) (AddUnary _) (Array x _) = Matrix (m ++ [x]) p
+--eval _ (ArrayType (t, m, c, [])) (AddUnary _) (Float y _) = ArrayType (t, m, c, [y])
+--eval _ (ArrayType a p) (AddUnary _) (Float y _) = Array (a ++ [y]) p
+--eval _ (Matrix [] p) (AddUnary _) (Array x _) = Matrix ([x]) p
+--eval _ (Matrix m p) (AddUnary _) (Array x _) = Matrix (m ++ [x]) p
 
 eval _ _ _ _ = error "Error on eval _ -- cannot match types!"
+
+
+arrangeEval :: Memory -> Types -> Token -> Token -> Types
+arrangeEval s (ArrayType (t, m, c, [])) (AddUnary _) y = ArrayType (t, m, c, [getType y s])

@@ -20,7 +20,7 @@ data Types =
   CharType Char                           |
   StringType String                       |
   RecordType (String, [(String, Types)])  |
-  ArrayType (String, Int, Int, [Float])   | -- name, maxSize, currentSize, load
+  ArrayType (String, Int, Int, [Types])   | -- typeName, maxSize, currentSize, load
   MatrixType [[Float]]
  
 
@@ -114,8 +114,9 @@ getType (Int value pos) _ = IntType value
 getType (Float value pos) _ = FloatType value
 getType (Bool value pos) _ = BoolType value
 getType (String value pos) _ = StringType value
-getType (Array value pos) _ = ArrayType ("", 2, 0, value)
-getType (Matrix value pos) _ = MatrixType value
+getType a b = error ("Error in getting type of" + a)
+--getType (Array pos) _ = ArrayType ("", 2, 0, [])
+--getType (Matrix value pos) _ = MatrixType value
 
 getDefaultValue :: Token -> Types
 getDefaultValue (Type "int" (l, c)) = IntType 0
@@ -124,7 +125,7 @@ getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
 getDefaultValue (Type "array" (l, c)) = ArrayType ("", 2, 0, []) --Temporary getDefaultValue 
-getDefaultValue (Type "matrix" (l, c)) = MatrixType [[]]
+--getDefaultValue (Type "matrix" (l, c)) = MatrixType [[]]
 
 getBoolValue :: Token -> Bool
 getBoolValue (Bool value pos) = value
@@ -196,5 +197,5 @@ instance Show Types where
   show (CharType value) = "(CharType, " ++ show value ++ ")"
   show (StringType value) = "(StringType, " ++ show value ++ ")"
   show (RecordType (name, fields)) = "(RecordType, " ++ show (name, fields) ++ ")"
-  show (ArrayType (name, maxSize, currentSize, load)) =
-    "(ArrayType, " ++ show (name, maxSize, currentSize, load) ++ ")"
+  show (ArrayType (typeName, maxSize, currentSize, load)) =
+    "(ArrayType, " ++ show (typeName, maxSize, currentSize, load) ++ ")"

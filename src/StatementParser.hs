@@ -51,14 +51,20 @@ varDecl = do
         --liftIO $ print s
         return (t : Id name p : [e])) else return []
 
-fieldsParser :: ParsecT [Token] Memory IO [(Types, String)]
-fieldsParser = do
+fieldParser :: ParsecT [Token] Memory IO (Types, String)
+fieldParser = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
   t <- typeToken
   (Id name p) <- idToken
   e <- semicolonToken
-  fp <- try fieldsParser
-  return ((getDefaultValue t, name) : fp)
+  return (getDefaultValue t, name)
+
+fieldsParser :: ParsecT [Token] Memory IO [(Types, String)]
+fieldsParser = do
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
+  fd <- fieldParser
+  fds <- fieldsParser <|> return []
+  return (fd : fds)
 
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do

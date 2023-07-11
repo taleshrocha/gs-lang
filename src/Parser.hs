@@ -18,8 +18,10 @@ recordParser = do
   rt1 <- recordToken 
   (Id name p) <- idToken 
   b <- beginToken
+
   fields <- fieldsParser
-  e <- endToken
+
+  e <- endToken 
   rt2 <- recordToken 
   modifyState (insertTypeOnMem (RecordType (name, fields)))
   s <- getState

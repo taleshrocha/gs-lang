@@ -15,7 +15,7 @@ import Data.Typeable (typeOf)
 
 stmts :: ParsecT [Token] Memory IO [Token]
 stmts = try (do
-    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> returnExp
+    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> returnExp <|> addEle
     b <- stmts
     return (a ++ b))
   <|> (do
@@ -51,6 +51,7 @@ varDecl = do
           if getIsExecOn s then (do
             modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
             s <- getState
+            --getType a s => IntType Int
             updateState (updateVarOnMem (name, getCurrentScope s, getType a s, False))
             --liftIO $ print s
             return (t : Id name p : a : [e])) else return []
@@ -147,6 +148,20 @@ turnType (BoolType _) s = (BoolType (read s))
 turnType (CharType _) s = (CharType (read s))
 turnType (StringType _) s = (StringType s)
 
+
+addEle :: ParsecT [Token] Memory IO [Token]
+addEle = do
+  ar <- idToken
+  c <- colonToken
+  ad <- addElementToken
+  pl <- parLToken
+  exp <- exprs
+  pr <- parRToken
+  sc <- semicolonToken
+  s <- getState
+  var <- getVariable (getName ar) (getCurrentScope s) (getVariables s)
+  typ <- getVariableType var
+  return ([ar])
 
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do

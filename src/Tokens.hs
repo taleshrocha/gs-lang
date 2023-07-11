@@ -223,6 +223,11 @@ modToken = tokenPrim show update_pos get_token where
   get_token (Mod p) = Just (Mod p)
   get_token _ = Nothing
 
+addElementToken :: ParsecT [Token] st IO Token
+addElementToken = tokenPrim show update_pos get_token where
+  get_token (AddElement p) = Just (AddElement p)
+  get_token _ = Nothing
+
 
 
 equalsToken :: ParsecT [Token] st IO Token

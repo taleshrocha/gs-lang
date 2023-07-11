@@ -65,6 +65,7 @@ tokens :-
   "/"                                            { \p s -> Div (getLC p) }
   "**"                                           { \p s -> Power (getLC p) }
   "%"                                            { \p s -> Mod (getLC p) }
+  addElement                                     { \p s -> AddElement (getLC p)}
 
   -- Relational Tokens
   "=="                                           { \p s -> Equals (getLC p) }
@@ -141,7 +142,8 @@ data Token =
   Mult            (Int, Int) | 
   Div             (Int, Int) | 
   Power           (Int, Int) | 
-  Mod             (Int, Int) | 
+  Mod             (Int, Int) |
+  AddElement      (Int, Int) | 
 
   Equals          (Int, Int) | 
   Different       (Int, Int) | 

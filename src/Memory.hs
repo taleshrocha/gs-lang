@@ -114,7 +114,6 @@ getType (Int value pos) _ = IntType value
 getType (Float value pos) _ = FloatType value
 getType (Bool value pos) _ = BoolType value
 getType (String value pos) _ = StringType value
-getType a b = error ("Error in getting type of" + a)
 --getType (Array pos) _ = ArrayType ("", 2, 0, [])
 --getType (Matrix value pos) _ = MatrixType value
 
@@ -187,6 +186,8 @@ compatible _ _ = error "Error on Memory -- compatible: type mismatch!"
 convertTypes :: Types -> Types -> Types
 convertTypes (IntType v) (FloatType _) = FloatType (fromIntegral v)
 convertTypes type1 _ = type1
+
+
 
 -- Show --------------------------------
 

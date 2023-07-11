@@ -13,6 +13,15 @@ import System.IO.Unsafe
 import Text.Printf (printf)
 import Data.Typeable (typeOf)
 
+fieldsParser :: ParsecT [Token] Memory IO [(Types, String)]
+fieldsParser = do
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
+  t <- typeToken
+  (Id name p) <- idToken
+  e <- semicolonToken
+  fds <- fieldsParser <|> return []
+  return ((getDefaultValue t, name) : fds)
+
 stmts :: ParsecT [Token] Memory IO [Token]
 stmts = try (do
     a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> returnExp
@@ -27,44 +36,46 @@ stmts = try (do
 varDecl :: ParsecT [Token] Memory IO [Token]
 varDecl = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
-  t <- typeToken
-  (Id name p) <- idToken
-  b <- optionMaybe assignToken
-  case b of
-    Just b -> do
-      exp <- exprs
+  r <- optionMaybe recordToken
+  case r of
+    Just r -> do
+      t <- idToken
+      (Id varName p) <- idToken
       e <- semicolonToken
       s <- getState
-      if getIsExecOn s then (do
-        modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
-        s <- getState
-        updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
-        --liftIO $ print s
-        return (t : Id name p : b : exp : [e])) else return []
-
+      if getIsExecOn s then
+        do
+          s <- getState
+          modifyState (insertVariableOnMem (varName, getCurrentScope s, getDefaultValue2 t s, False))
+          s <- getState
+          --liftIO $ print s
+          return (r : t : (Id varName p) : [e]) 
+        else 
+          return []
     Nothing -> do
-      e <- semicolonToken
-      s <- getState
-      if getIsExecOn s then (do
-        modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
-        s <- getState
-        --liftIO $ print s
-        return (t : Id name p : [e])) else return []
+      t <- typeToken <|> idToken
+      (Id name p) <- idToken
+      b <- optionMaybe assignToken
+      case b of
+        Just b -> do
+          exp <- exprs
+          e <- semicolonToken
+          s <- getState
+          if getIsExecOn s then (do
+            modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+            s <- getState
+            updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
+            --liftIO $ print s
+            return (t : Id name p : b : exp : [e])) else return []
 
-fieldParser :: ParsecT [Token] Memory IO (Types, String)
-fieldParser = do
-  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
-  t <- typeToken
-  (Id name p) <- idToken
-  e <- semicolonToken
-  return (getDefaultValue t, name)
-
-fieldsParser :: ParsecT [Token] Memory IO [(Types, String)]
-fieldsParser = do
-  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
-  fd <- fieldParser
-  fds <- fieldsParser <|> return []
-  return (fd : fds)
+        Nothing -> do
+          e <- semicolonToken
+          s <- getState
+          if getIsExecOn s then (do
+            modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+            s <- getState
+            --liftIO $ print s
+            return (t : Id name p : [e])) else return []
 
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do

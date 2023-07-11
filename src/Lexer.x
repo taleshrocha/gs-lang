@@ -39,6 +39,7 @@ tokens :-
 
   -- Separators
   ":"                                            { \p s -> Colon (getLC p) }
+  "."                                            { \p s -> Dot (getLC p) }
   ";"                                            { \p s -> SemiColon (getLC p) }
   ","                                            { \p s -> Comma  (getLC p) }
   "("                                            { \p s -> ParL (getLC p) }
@@ -85,8 +86,8 @@ tokens :-
   False                                          { \p s -> Bool (read s) (getLC p) }
   \'.\'                                          { \p s -> Char (read s)  (getLC p) }
   $alpha [$alpha $digit \_ \']*                  { \p s -> Id s  (getLC p) }
-  -- \" $alpha [$alpha $digit ! \_ \']* \"          { \p s -> String s (getLC p) }
-  \".*\"          { \p s -> String s (getLC p) }
+  -- \" $alpha [$alpha $digit ! \_ \']* \"       { \p s -> String s (getLC p) }
+  \".*\"                                         { \p s -> String s (getLC p) }
 
 {
 -- Each action has type :: AlexPosn -> String -> Token
@@ -116,6 +117,7 @@ data Token =
   For             (Int, Int) |
 
   Colon           (Int, Int) |
+  Dot             (Int, Int) |
   SemiColon       (Int, Int) |
   Comma           (Int, Int) |
   ParL            (Int, Int) |

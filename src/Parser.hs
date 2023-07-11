@@ -19,20 +19,20 @@ recordParser = do
   (Id name p) <- idToken 
   b <- beginToken
 
-  fields <- fieldsParser
+  fields <- fieldsParser -- TODO check if all the fields have diferent names
 
   e <- endToken 
   rt2 <- recordToken 
   modifyState (insertTypeOnMem (RecordType (name, fields)))
   s <- getState
   liftIO $ print s
-  return ([rt1])
+  return (rt1 : (Id name p) : b : e : [rt2])
 
 program :: ParsecT [Token] Memory IO ([Token])
 program = do
   r <- recordParser
   a <- mainProgram
-  return a
+  return (r ++ a)
 
 mainProgram :: ParsecT [Token] Memory IO ([Token])
 mainProgram = do

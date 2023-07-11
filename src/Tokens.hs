@@ -104,6 +104,11 @@ forToken = tokenPrim show update_pos get_token where
 
 
 
+dotToken :: ParsecT [Token] st IO Token
+dotToken = tokenPrim show update_pos get_token where
+  get_token (Dot p) = Just (Dot p)
+  get_token _ = Nothing
+
 colonToken :: ParsecT [Token] st IO Token
 colonToken = tokenPrim show update_pos get_token where
   get_token (Colon p) = Just (Colon p)

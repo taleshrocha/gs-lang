@@ -120,5 +120,8 @@ eval _ (String x p) (LessOrEqual _) (String y _) = Bool (x <= y) p
 eval _ _ _ _ = error "Error on eval _ -- cannot match types!"
 
 
+arrangeAdd :: Memory -> Types -> Token -> Types
+arrangeAdd s (ArrayType (t, m, c, [])) y = ArrayType (t, m, c, [getType y s])
+
 arrangeEval :: Memory -> Types -> Token -> Token -> Types
 arrangeEval s (ArrayType (t, m, c, [])) (AddUnary _) y = ArrayType (t, m, c, [getType y s])

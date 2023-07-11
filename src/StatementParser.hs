@@ -151,7 +151,7 @@ turnType (StringType _) s = (StringType s)
 
 addEle :: ParsecT [Token] Memory IO [Token]
 addEle = do
-  ar <- idToken
+  id <- idToken
   c <- colonToken
   ad <- addElementToken
   pl <- parLToken
@@ -159,9 +159,11 @@ addEle = do
   pr <- parRToken
   sc <- semicolonToken
   s <- getState
-  var <- getVariable (getName ar) (getCurrentScope s) (getVariables s)
-  typ <- getVariableType var
-  return ([ar])
+  --var <- getVariable (getName id) (getCurrentScope s) (getVariables s)
+  --arr <- getVariableType var
+  --arr ++ exp
+  updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
+  return ([id])
 
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do

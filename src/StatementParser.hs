@@ -57,7 +57,8 @@ fieldsParser = do
   t <- typeToken
   (Id name p) <- idToken
   e <- semicolonToken
-  return [(getDefaultValue t, name)]
+  fp <- try fieldsParser
+  return ((getDefaultValue t, name) : fp)
 
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do

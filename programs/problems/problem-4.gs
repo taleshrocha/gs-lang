@@ -1,6 +1,6 @@
 record rational_t begin
   int numerador;
-  //int denominador;
+  int denominador;
 end record
 
 int main() begin

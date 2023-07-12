@@ -81,6 +81,25 @@ updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : 
         ++ ".")
   else (id2, scope2, type2, isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
 
+updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, (ArrayType (ts, v, i, vals)), isConst2) : tail) =
+  if id1 == id2 && scope1 == scope2 then
+    if isConst2 == True then error ("Error on Memory -- updateVariable: trying to change the value of the " ++ show (id2, scope2, type2, True) ++ " constant!")
+    else do
+      val <- retEleFromArr vals i
+      if compatible type2 val then (id1, scope1, addElementAtIndex convertTypes type1 type2 i vals, isConst2) : tail
+      else error ("Error on Memory -- updateVariable: variable "
+        ++ show (id2, scope2, type2, False)
+        ++ " is not compatible with Type "
+        ++ show type1
+        ++ ".")
+  else (id2, scope2, type2, isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
+
+addElementAtIndex :: Types -> Int -> [Types] -> [Types]
+addElementAtIndex value index list
+  | index >= length list = error "Index is out of range."
+  | otherwise = take index list ++ [value] ++ drop (index + 1) list
+
+
 -- Removes --------------------------------------------------------------------
 
 -- For Variables -----------------------
@@ -128,7 +147,14 @@ getDefaultValue (Type "matrix" (l, c)) = MatrixType (2, 0, [[]])
 getDefaultValue (Type "matrix" (l, c)) = MatrixType (2, 0, [[]])
 
 getDefaultValueArr :: Types -> Types
-getDefaultValueArr (ArrayType (ts, v, i, [])) = ArrayType (ts, v, i, replicate v (IntType 0))
+getDefaultValueArr (ArrayType (ts, v, i, [])) = ArrayType (ts, v, i, replicate v (strToType ts))
+
+strToType :: String -> Types
+strToType "int" = IntType 0
+strToType "float" = FloatType 0.0
+strToType "bool" = BoolType False
+strToType "char" = CharType 'a'
+strToType "string" = StringType ""
 
 getTypeStr :: Token -> String
 getTypeStr (Type s _) = s
@@ -232,19 +258,15 @@ typeToToken (FloatType value) = (Float value (0, 0))
 typeToToken (BoolType value) = (Bool value (0, 0))
 typeToToken (StringType value) = (String value (0, 0))
 
+retEleFromArr :: [Types] -> Int -> Types
+retEleFromArr (h : l) i = 
+  if(i == 0) then h
+  else retEleFromArr l (i-1)
 
-retEleFromArr :: Types -> Int -> Token
-retEleFromArr (ArrayType (t, m, c, h:[l])) i = 
-  if(i == 0) then
-    typeToToken h
-  else 
-    retEleFromArr (ArrayType (t, m, c, [l])) (i-1)
-retEleFromArr (ArrayType (t, m, c, [h])) i = 
-  if(i == 0) then
-    typeToToken h
+retEleFromArr [h] i = 
+  if(i == 0) then h
   else
     error "Something unexpected happened"
-    
 
 -- Show --------------------------------
 

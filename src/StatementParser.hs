@@ -69,15 +69,22 @@ assign :: ParsecT [Token] Memory IO [Token]
 assign = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "assign"
   (Id name p) <- idToken
-  b <- assignToken
-  exp <- exprs
-  d <- semicolonToken
-  s <- getState
-  if getIsExecOn s then (do
-    updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
+  bl <- optionMaybe bracketLToken
+  case bl of
+    Just bl -> do
+      (Int v _) <- intToken
+      br <- bracketRToken
+    --Nothing -> do
+    b <- assignToken
+    exp <- exprs
+    d <- semicolonToken
     s <- getState
-    --liftIO $ print s
-    return (Id name p : b : exp : [d])) else return []
+    if getIsExecOn s then (do
+      updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
+      s <- getState
+      --liftIO $ print s
+      return (Id name p : b : exp : [d])) else return []
+
 
 printFun :: ParsecT [Token] Memory IO [Token]
 printFun = try (do
@@ -149,27 +156,6 @@ turnType (CharType _) s = (CharType (read s))
 turnType (StringType _) s = (StringType s)
 
 
-addEle :: ParsecT [Token] Memory IO [Token]
-addEle = do
-  ad <- addElementToken
-  c <- doubleColonToken
-  id <- idToken
-  pl <- parLToken
-  exp <- exprs
-  pr <- parRToken
-  sc <- semicolonToken
-  s <- getState
-  --var <- getVariable (getName id) (getCurrentScope s) (getVariables s)
-  --arr <- getVariableType var
-  --arr ++ exp
-  if(typeCompatible (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp) then
-    if(arrayFull (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s)))) then
-        error "Array full, can't add more :("
-      else
-      updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
-  else
-    error "Can't add this element on this array -- Incompatible type"
-  return ([id])
   
 
 getEle :: ParsecT [Token] Memory IO Token

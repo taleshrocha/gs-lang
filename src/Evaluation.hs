@@ -5,12 +5,16 @@ import Tokens
 import Memory
 import Data.Bits
 import Data.Fixed (mod')
+import GHC.Core.Coercion.Opt (optCoercion)
 
-idTokenToTypeToken :: Token -> String -> [Variable] -> Token
-idTokenToTypeToken (Id id _) sc [] = error ("Error on eval _uation -- eval _Aux: variable (" ++ show id ++ ") not declared in " ++ sc ++ " scope!")
+idTokenToTypeTokenMem :: Token -> Int -> Memory -> Token
+idTokenToTypeTokenMem tk i (currentScope, scopes, varTable, funcTable, typeTable, isOn) = idTokenToTypeToken tk i varTable
 
-idTokenToTypeToken (Id id p) scope ((id2, scope2, type2, is_const) : tail) =
-  if id == id2 && scope == scope2 then
+idTokenToTypeToken :: Token -> Int -> [Variable] -> Token
+idTokenToTypeToken (Id id _) sc [] = error ("Error on idTokenToTypeToken: variable (" ++ show id ++ ") not declared in " ++ show sc ++ " scope!")
+
+idTokenToTypeToken (Id id p) scope ((id2, scope2, type2, is_const, ptr) : tail) =
+  if id == id2 && scope >= scope2 then
     case type2 of
         (IntType x) -> Int x p
         (FloatType x) -> Float x p
@@ -19,6 +23,20 @@ idTokenToTypeToken (Id id p) scope ((id2, scope2, type2, is_const) : tail) =
         (StringType x) -> String x p
         _ -> error "Error on Evaluation -- idTokenToTypeToken: invalid variable type!"
   else idTokenToTypeToken (Id id p) scope tail
+
+evalUnary :: Memory -> Token -> Token -> Token
+evalUnary mem opToken (Id id p) = evalUnary mem opToken (idTokenToTypeToken (Id id p) (getCurrentScope mem) (getVariables mem))
+
+evalUnary _ (Sub p) (Int y _) = Int (negate y) p
+evalUnary _ (Sub p) (Float y _) = Float (0.0 - y) p
+
+evalUnary _ (AddUnary p) (Int y _) = Int (y + 1) p
+evalUnary _ (AddUnary p) (Float y _) = Float (y + 1) p
+
+evalUnary _ (SubUnary p) (Int y _) = Int (y - 1) p
+evalUnary _ (SubUnary p) (Float y _) = Float (y - 1) p
+
+evalUnary _ _ _ = error "Error on evalUnary: cannot match types!"
 
 
 eval :: Memory -> Token -> Token -> Token -> Token
@@ -109,4 +127,4 @@ eval _ (Float x p) (LessOrEqual _) (Int y _) = Bool (x <= fromIntegral y) p
 eval _ (Char x p) (LessOrEqual _) (Char y _) = Bool (x <= y) p
 eval _ (String x p) (LessOrEqual _) (String y _) = Bool (x <= y) p
 
-eval _ _ _ _ = error "Error on eval _ -- cannot match types!"
+eval _ _ _ _ = error "Error on eval: cannot match types!"

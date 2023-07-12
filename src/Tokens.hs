@@ -98,6 +98,16 @@ forToken = tokenPrim show update_pos get_token where
   get_token (For p) = Just (For p)
   get_token _ = Nothing
 
+breakToken :: ParsecT [Token] st IO Token
+breakToken = tokenPrim show update_pos get_token where
+  get_token (Break p) = Just (Break p)
+  get_token _ = Nothing
+
+continueToken :: ParsecT [Token] st IO Token
+continueToken = tokenPrim show update_pos get_token where
+  get_token (Continue p) = Just (Continue p)
+  get_token _ = Nothing
+
 
 
 
@@ -213,6 +223,11 @@ powerToken = tokenPrim show update_pos get_token where
 modToken :: ParsecT [Token] st IO Token
 modToken = tokenPrim show update_pos get_token where
   get_token (Mod p) = Just (Mod p)
+  get_token _ = Nothing
+
+amperToken :: ParsecT [Token] st IO Token
+amperToken = tokenPrim show update_pos get_token where
+  get_token (Amper p) = Just (Amper p)
   get_token _ = Nothing
 
 

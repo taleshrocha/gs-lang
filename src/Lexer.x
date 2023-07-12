@@ -35,6 +35,8 @@ tokens :-
 
   while                                          { \p s -> While (getLC p) }
   for                                            { \p s -> For (getLC p) }
+  break                                          { \p s -> Break (getLC p) }
+  continue                                       { \p s -> Continue (getLC p) }
 
   -- Separators
   ":"                                            { \p s -> Colon (getLC p) }
@@ -63,6 +65,7 @@ tokens :-
   "/"                                            { \p s -> Div (getLC p) }
   "**"                                           { \p s -> Power (getLC p) }
   "%"                                            { \p s -> Mod (getLC p) }
+  "&"                                            { \p s -> Amper (getLC p) }
 
   -- Relational Tokens
   "=="                                           { \p s -> Equals (getLC p) }
@@ -112,6 +115,8 @@ data Token =
 
   While           (Int, Int) |
   For             (Int, Int) |
+  Break           (Int, Int) |
+  Continue        (Int, Int) |
 
   Colon           (Int, Int) |
   SemiColon       (Int, Int) |
@@ -138,6 +143,7 @@ data Token =
   Div             (Int, Int) | 
   Power           (Int, Int) | 
   Mod             (Int, Int) | 
+  Amper           (Int, Int) |
 
   Equals          (Int, Int) | 
   Different       (Int, Int) | 

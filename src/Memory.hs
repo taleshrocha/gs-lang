@@ -1,17 +1,21 @@
 module Memory where
 import Lexer
+import Text.Parsec (getInput)
+import Control.Monad (when)
 
 -- Type and data declaration --------------------------------------------------
 
 type Memory = (Scope, [Scope], [Variable], [Function], [Types], Bool)
 
-type Scope = String
+type Scope = Int
 
--- [id, scope, value, isConst]
-type Variable = (String, Scope, Types, Bool)
+type Pointer = (String, Scope, Bool)
+
+-- [id, scope, value, isConst, pointer@(id, scope, isPointer)]
+type Variable = (String, Scope, Types, Bool, Pointer)
 
 -- [id, returnType, params, body]
-type Function = (String, Types, [Variable], [Token])
+type Function = (String, (Bool, Types), [Token], [Token])
 
 data Types =
   IntType Int                             |
@@ -19,6 +23,7 @@ data Types =
   BoolType Bool                           |
   CharType Char                           |
   StringType String                       |
+  VoidType                                |
   RecordType (String, [(String, Types)])  |
   ArrayType (String, Int, Int, [Types])  -- name, maxSize, currentSize, load
 
@@ -26,16 +31,22 @@ data Types =
 
 -- For Variables -----------------------
 
-insertVariableOnMem :: Variable -> Memory -> Memory
-insertVariableOnMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn)  =
-  (currentScope, scopes, insertVariable var varTable, funcTable, typeTable, isOn)
+insertVariableOnMem :: Types -> Variable -> Memory -> Memory
+insertVariableOnMem type2 var (currentScope, scopes, varTable, funcTable, typeTable, isOn)  =
+  (currentScope, scopes, insertVariable type2 var varTable, funcTable, typeTable, isOn)
 
-insertVariable :: Variable -> [Variable] -> [Variable]
-insertVariable var [] = [var]
+insertVariable :: Types -> Variable -> [Variable] -> [Variable]
+insertVariable type2 (id1, scope1, type1, isConst1, ptr1) [] = do
+  if compatible type2 type1 then [(id1, scope1, convertTypes type1 type2, isConst1, ptr1)]
+  else error ("Error on Memory -- insertVariable: variable "
+    ++ show (id1, scope1, type2, isConst1)
+    ++ " is not compatible with Type "
+    ++ show type1
+    ++ ".")
 
-insertVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : tail) =
+insertVariable type2 (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, type3, isConst2, ptr) : tail) =
   if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- insertVariable: variable (" ++ show (id1, scope1, type1, isConst1) ++") already declared *in this scope*!")
-  else (id2, scope2, type2, isConst2) : insertVariable (id1, scope1, type1, isConst1) tail
+  else insertVariable type2 (id1, scope1, type1, isConst1, ptr1) tail ++ [(id2, scope2, type3, isConst2, ptr)]
 
 -- For Functions -----------------------
 
@@ -50,68 +61,106 @@ insertFunction (id1, return1, params1, body1) ((id2, return2, params2, body2) : 
   if id1 == id2 then error "Error: function already exists!"
   else (id2, return2, params2, body2) : insertFunction (id1, return1, params1, body1) tail
 
+getFunctionBody :: String -> Memory -> [Token]
+getFunctionBody name (currentScope, scopes, varTable, (funcName, ret, params, body) : tail, typeTable, isOn)
+  | name == funcName = body
+  | null tail = error ("Error on Memory -- getFunctionBody: function (" ++ show name ++ ") not declared!")
+  | otherwise = getFunctionBody name (currentScope, scopes, varTable, tail, typeTable, isOn)
+
 -- For Scope -----------------------
 
 insertScope :: Scope -> Memory -> Memory
 insertScope scope (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
   (scope, scope : scopes, varTable, funcTable, typeTable, isOn)
 
+removeScope :: Memory -> Memory
+removeScope (currentScope, scope : scopes, varTable, funcTable, typeTable, isOn) =
+  (head scopes, scopes, varTable, funcTable, typeTable, isOn)
+
 -- Updates --------------------------------------------------------------------
 
 -- For Variables -----------------------
 
 updateVarOnMem :: Variable -> Memory -> Memory
-updateVarOnMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
-  (currentScope, scopes, updateVariable var varTable, funcTable, typeTable, isOn)
+updateVarOnMem var mem@(currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, updateVariable mem var varTable, funcTable, typeTable, isOn)
 
-updateVariable :: Variable -> [Variable] -> [Variable]
-updateVariable var [] = error ("Error on Memory -- updateVariable: variable (" ++ show var ++ ") not declared!")
+updateVariable :: Memory -> Variable -> [Variable] -> [Variable]
+updateVariable mem var [] = error ("Error on Memory -- updateVariable: variable (" ++ show var ++ ") not declared!")
 
-updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : tail) =
-  if id1 == id2 && scope1 == scope2 then
-    if isConst2 == True then error ("Error on Memory -- updateVariable: trying to change the value of the " ++ show (id2, scope2, type2, True) ++ " constant!")
+updateVariable mem (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, type2, isConst2, (ptrId, ptrScp, ptrTru)) : tail)
+  | id1 == id2 && scope1 >= scope2 = if isConst2 then error ("Error on Memory -- updateVariable: trying to change the value of the " ++ show (id2, scope2, type2, True) ++ " constant!")
     else
-      if compatible type2 type1 then (id1, scope1, convertTypes type1 type2, isConst2) : tail
+      if compatible type2 type1 then do
+          if ptrTru then (do
+            let mem2 = updateVarOnMem (ptrId, ptrScp, type1, isConst2, ("",0,False)) mem
+            getVariables (updateVarOnMem (id1, scope1, type1, isConst1, ptr1) mem2))
+          else return (id1, scope2, convertTypes type1 type2, isConst2, (ptrId, ptrScp, ptrTru))
       else error ("Error on Memory -- updateVariable: variable "
-        ++ show (id2, scope2, type2, False)
+        ++ show (id2, scope2, type2, isConst2)
         ++ " is not compatible with Type "
         ++ show type1
         ++ ".")
-  else (id2, scope2, type2, isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
+  | null tail = error ("Error on Memory -- updateVariable: variable (" ++ show (id1, scope1, type1, isConst1) ++ ") not declared!")
+  | otherwise = (id2, scope2, type2, isConst2, (ptrId, ptrScp, ptrTru)) : updateVariable mem (id1, scope1, type1, isConst1, ptr1) tail
 
 -- Removes --------------------------------------------------------------------
 
 -- For Variables -----------------------
+
+cleanMemFromScope :: Scope -> Memory -> Memory
+cleanMemFromScope scp (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, cleanMem scp varTable, funcTable, typeTable, isOn)
+
+cleanMem :: Scope -> [Variable] -> [Variable]
+cleanMem scp ((id, scope, typ, isConst, ptr) : tail)
+  | scp == scope = tail
+  | otherwise = (id, scope, typ, isConst, ptr) : cleanMem scp tail
 
 removeVarFromMem :: Variable -> Memory -> Memory
 removeVarFromMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
   (currentScope, scopes, removeVariable var varTable, funcTable, typeTable, isOn)
 
 removeVariable :: Variable -> [Variable] -> [Variable]
-removeVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : tail) =
+removeVariable (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, type2, isConst2, ptr2) : tail) =
   if id1 == id2 && scope1 == scope2 then tail
-  else (id2, scope2, type2, isConst2) : removeVariable (id1, scope1, type1, isConst1) tail
+  else (id2, scope2, type2, isConst2, ptr2) : removeVariable (id1, scope1, type1, isConst1, ptr1) tail
 
 ---- Getters ------------------------------------------------------------------
 
-getVariable :: String -> String -> [Variable] -> Variable
-getVariable var sc [] = error ("Error on Memory -- getVariable: variable (" ++ show var ++ ") not declared in " ++ sc ++ " scope!")
+getVariableMem :: String -> Int -> Memory -> Variable
+getVariableMem tk i (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getVariable tk i varTable
 
-getVariable id scope ((id2, scope2, type2, is_const) : tail) =
-  if id == id2 && scope == scope2 then (id2, scope2, type2, is_const)
+getVariable :: String -> Int -> [Variable] -> Variable
+getVariable var sc [] = error ("Error on Memory -- getVariable: variable (" ++ show var ++ ") not declared!")
+
+getVariable id scope ((id2, scope2, type2, is_const, ptr) : tail) =
+  if id == id2 && scope >= scope2 then (id2, scope2, type2, is_const, ptr)
   else getVariable id scope tail
 
 getType :: Token -> Memory -> Types
-getType (Id id pos) (_, _, [], _, _, _) = error ("Error on Memory -- getType: variable not declared (" ++ show (Id id pos) ++ ") *in this scope*!")
+getType tkn (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getTypeAux tkn currentScope varTable
 
-getType (Id id1 pos1) (currentScope, scopes, (id2, scope2, type2, _) : tail, funcs, types, isExecOn) =
-  if id1 == id2 && currentScope == scope2 then type2
-  else getType (Id id1 pos1) (currentScope, scopes, tail, funcs, types, isExecOn)
+getTypeAux :: Token -> Scope -> [Variable] -> Types
+getTypeAux (Id id pos) sco [] = error ("Error on Memory -- getType: variable not declared (" ++ show (Id id pos) ++ ") *in this scope*!")
 
-getType (Int value pos) _ = IntType value
-getType (Float value pos) _ = FloatType value
-getType (Bool value pos) _ = BoolType value
-getType (String value pos) _ = StringType value
+getTypeAux (Id id pos) sco ((id2, scope2, type2, is_const, ptr) : tail)
+  | id == id2 && sco >= scope2 = type2
+  | null tail = error ("Error on Memory -- getType: variable not declared (" ++ show (Id id pos) ++ ") *in this scope*!")
+  | otherwise = getTypeAux (Id id pos) sco tail
+
+getTypeAux (Int value pos) _ _ = IntType value
+getTypeAux (Float value pos) _ _ = FloatType value
+getTypeAux (Bool value pos) _ _ = BoolType value
+getTypeAux (String value pos) _ _ = StringType value
+
+getTypeAux (Type "int" (l, c)) _ _ = IntType 0
+getTypeAux (Type "float" (l, c)) _ _ = FloatType 0.0
+getTypeAux (Type "bool" (l, c)) _ _ = BoolType False
+getTypeAux (Type "char" (l, c)) _ _ = CharType 'a'
+getTypeAux (Type "string" (l, c)) _ _ = StringType ""
+
+getTypeAux _ _ _ = error "Error on Memory -- getType: invalid Token to Types convertion!"
 
 getDefaultValue :: Token -> Types
 getDefaultValue (Type "int" (l, c)) = IntType 0
@@ -150,16 +199,19 @@ setExecOnOff (currentScope, scopes, varTable, funcTable, typeTable, isExecOn) = 
 -- For Type Variable -------------------
 
 getVariableName :: Variable -> String
-getVariableName (name, _, _, _) = name
+getVariableName (name, _, _, _, _) = name
 
 getVariableScope :: Variable -> Scope
-getVariableScope (_, scope, _, _) = scope
+getVariableScope (_, scope, _, _, _) = scope
 
 getVariableType :: Variable -> Types
-getVariableType (_, _, varType, _) = varType
+getVariableType (_, _, varType, _, _) = varType
 
 getIsVariableConst :: Variable -> Bool
-getIsVariableConst (_, _, _, isConst) = isConst
+getIsVariableConst (_, _, _, isConst, _) = isConst
+
+getIsVariablePointer :: Variable -> Pointer
+getIsVariablePointer (_, _, _, _, ptr1) = ptr1
 
 -- Misc -----------------------------------------------------------------------
 

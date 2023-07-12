@@ -172,6 +172,23 @@ addEle = do
   else
     error "Can't add this element on this array -- Incompatible type"
   return ([id])
+  
+
+getEle :: ParsecT [Token] Memory IO Token
+getEle = do
+  get <- getElementToken
+  c <- doubleColonToken
+  id <- idToken
+  pl <- parLToken
+  exp <- exprs
+  pr <- parRToken
+  s <- getState
+  if(getCurrentSize (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) > getIntValue exp) then
+    return (retEleFromArr (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) (getIntValue exp))
+    --updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
+  else
+    error "Can't get this element on this array -- wrong index?"
+
 
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do
@@ -281,7 +298,7 @@ expT = try (do
   ex <- exprs
   pr <- parRToken
   return ex
-  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken-- <|> arrayToken <|> matrixToken
+  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken <|> getEle -- <|> arrayToken <|> matrixToken
   
 arrayDec :: ParsecT [Token] Memory IO Token
 arrayDec = try (do

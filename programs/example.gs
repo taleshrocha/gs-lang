@@ -13,8 +13,12 @@ int main() begin
   print(a);
   addElement::a(2);
   addElement::a(3.7);
-  print(a);
-  addElement::a(5.7);
+  print(getElement::a(1));
+  float ff := getElement::a(0);
+  print(ff);
+  //float pp := getElement::a(2);
+  //print(pp);
+  //addElement::a(5.7);
   print(a);
 
 end main

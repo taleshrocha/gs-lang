@@ -232,7 +232,21 @@ addElementToken :: ParsecT [Token] st IO Token
 addElementToken = tokenPrim show update_pos get_token where
   get_token (AddElement p) = Just (AddElement p)
   get_token _ = Nothing
+  
+getElementToken :: ParsecT [Token] st IO Token
+getElementToken = tokenPrim show update_pos get_token where
+  get_token (GetElement p) = Just (GetElement p)
+  get_token _ = Nothing
+  
+addArrayToken :: ParsecT [Token] st IO Token
+addArrayToken = tokenPrim show update_pos get_token where
+  get_token (AddArray p) = Just (AddArray p)
+  get_token _ = Nothing
 
+getArrayToken :: ParsecT [Token] st IO Token
+getArrayToken = tokenPrim show update_pos get_token where
+  get_token (GetArray p) = Just (GetArray p)
+  get_token _ = Nothing
 
 
 equalsToken :: ParsecT [Token] st IO Token

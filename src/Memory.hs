@@ -21,7 +21,7 @@ data Types =
   StringType String                       |
   RecordType (String, [(String, Types)])  |
   ArrayType (String, Int, Int, [Types])   | -- typeName, maxSize, currentSize, load
-  MatrixType [[Float]]
+  MatrixType (Int, Int, [[Types]])          -- maxSize, currentSize, load
  
 
 -- Inserts --------------------------------------------------------------------
@@ -124,10 +124,13 @@ getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
 getDefaultValue (Type "array" (l, c)) = ArrayType ("int", 2, 0, []) --Temporary getDefaultValue 
---getDefaultValue (Type "matrix" (l, c)) = MatrixType [[]]
+getDefaultValue (Type "matrix" (l, c)) = MatrixType (2, 0, [[]])
 
 getTypeStr :: Token -> String
 getTypeStr (Type s _) = s
+
+getIntValue :: Token -> Int
+getIntValue (Int v _) = v
 
 getBoolValue :: Token -> Bool
 getBoolValue (Bool value pos) = value
@@ -208,7 +211,31 @@ arrayFull (ArrayType (_, m, c, _)) =
     True
   else 
     False
+    
+getCurrentSize :: Types -> Int
+getCurrentSize (ArrayType (_, _, c, _)) = c
+getCurrentSize (MatrixType (_, c, _)) = c
 
+
+typeToToken :: Types -> Token
+typeToToken (IntType value) = (Int value (0, 0))
+typeToToken (FloatType value) = (Float value (0, 0))
+typeToToken (BoolType value) = (Bool value (0, 0))
+typeToToken (StringType value) = (String value (0, 0))
+
+
+retEleFromArr :: Types -> Int -> Token
+retEleFromArr (ArrayType (t, m, c, h:[l])) i = 
+  if(i == 0) then
+    typeToToken h
+  else 
+    retEleFromArr (ArrayType (t, m, c, [l])) (i-1)
+retEleFromArr (ArrayType (t, m, c, [h])) i = 
+  if(i == 0) then
+    typeToToken h
+  else
+    error "Something unexpected happened"
+    
 
 -- Show --------------------------------
 

@@ -126,5 +126,10 @@ arrangeAdd s (ArrayType ("float", m, c, l)) (Int y p) = ArrayType ("float", m, c
 arrangeAdd s (ArrayType (t, m, c, [])) y = ArrayType (t, m, c+1, [getType y s])
 arrangeAdd s (ArrayType (t, m, c, l)) y = ArrayType (t, m, c+1, l ++ [getType y s])
 
-arrangeEval :: Memory -> Types -> Token -> Token -> Types
-arrangeEval s (ArrayType (t, m, c, [])) (AddUnary _) y = ArrayType (t, m, c, [getType y s])
+matrixAdd :: Memory -> Types -> Types -> Types
+matrixAdd s (MatrixType (m, c, [])) (ArrayType (t, ma, ca, arr)) = MatrixType (m, c+1, [arr]) --To add only the load of it
+--matrixAdd s (MatrixType (m, c, [])) arr = MatrixType (m, c+1, [[arr]]) --To add entire array
+matrixAdd s (MatrixType (m, c, l)) (ArrayType (t, ma, ca, arr)) = MatrixType (m, c+1, l ++[arr])
+
+--matrixEval :: Memory -> Types -> Types -> Types
+--matrixEval s (MatrixType (m, c, [])) arr = ArrayType (t, m, c, [getType y s])

@@ -2,7 +2,7 @@ int main() begin
   int x := 5;
   float y := 4;
   int c := 3;
-  array a;
+  array a float[5];
   //array b;
   //matrix m;
   //a := a ++ y;
@@ -11,8 +11,8 @@ int main() begin
   //scan(x);
   print(x);
   print(a);
-  a:addElement(2);
-  print(x);
+  addElement::a(2.7);
+  print(a);
   //b := b ++ 2.0;
   //print(a);
   //print(b);

@@ -105,6 +105,11 @@ colonToken :: ParsecT [Token] st IO Token
 colonToken = tokenPrim show update_pos get_token where
   get_token (Colon p) = Just (Colon p)
   get_token _ = Nothing
+  
+doubleColonToken :: ParsecT [Token] st IO Token
+doubleColonToken = tokenPrim show update_pos get_token where
+  get_token (DoubleColon p) = Just (DoubleColon p)
+  get_token _ = Nothing
 
 semicolonToken :: ParsecT [Token] st IO Token
 semicolonToken = tokenPrim show update_pos get_token where

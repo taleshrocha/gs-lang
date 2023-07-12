@@ -38,6 +38,7 @@ tokens :-
 
   -- Separators
   ":"                                            { \p s -> Colon (getLC p) }
+  "::"                                           { \p s -> DoubleColon (getLC p) }
   ";"                                            { \p s -> SemiColon (getLC p) }
   ","                                            { \p s -> Comma  (getLC p) }
   "("                                            { \p s -> ParL (getLC p) }
@@ -117,6 +118,7 @@ data Token =
   For             (Int, Int) |
 
   Colon           (Int, Int) |
+  DoubleColon     (Int, Int) |
   SemiColon       (Int, Int) |
   Comma           (Int, Int) |
   ParL            (Int, Int) |

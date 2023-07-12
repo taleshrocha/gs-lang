@@ -123,8 +123,11 @@ getDefaultValue (Type "float" (l, c)) = FloatType 0.0
 getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
-getDefaultValue (Type "array" (l, c)) = ArrayType ("", 2, 0, []) --Temporary getDefaultValue 
+getDefaultValue (Type "array" (l, c)) = ArrayType ("int", 2, 0, []) --Temporary getDefaultValue 
 --getDefaultValue (Type "matrix" (l, c)) = MatrixType [[]]
+
+getTypeStr :: Token -> String
+getTypeStr (Type s _) = s
 
 getBoolValue :: Token -> Bool
 getBoolValue (Bool value pos) = value

@@ -28,8 +28,8 @@ varDecl :: ParsecT [Token] Memory IO [Token]
 varDecl = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
   t <- typeToken 
-  a <- optionMaybe arrayDec
   (Id name p) <- idToken
+  a <- optionMaybe arrayDec
   b <- optionMaybe assignToken
   case b of
     Just b -> do
@@ -46,13 +46,15 @@ varDecl = do
     Nothing -> do
       case a of
         Just a -> do
+          (Int v _) <- intToken
+          br <- bracketRToken
           e <- semicolonToken
           s <- getState
           if getIsExecOn s then (do
             modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
             s <- getState
             --getType a s => IntType Int
-            updateState (updateVarOnMem (name, getCurrentScope s, getType a s, False))
+            updateState (updateVarOnMem (name, getCurrentScope s, ArrayType (getTypeStr a, v, 0, []), False))
             --liftIO $ print s
             return (t : Id name p : a : [e])) else return []
         Nothing -> do
@@ -151,9 +153,9 @@ turnType (StringType _) s = (StringType s)
 
 addEle :: ParsecT [Token] Memory IO [Token]
 addEle = do
-  id <- idToken
-  c <- colonToken
   ad <- addElementToken
+  c <- doubleColonToken
+  id <- idToken
   pl <- parLToken
   exp <- exprs
   pr <- parRToken
@@ -277,7 +279,8 @@ expT = try (do
   
 arrayDec :: ParsecT [Token] Memory IO Token
 arrayDec = try (do
-  bl <- bracketLToken
   t <- typeToken
-  br <- bracketRToken
+  bl <- bracketLToken
+  --n <- intToken
+  --br <- bracketRToken
   return (t))

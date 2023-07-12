@@ -37,7 +37,7 @@ varDecl = do
       e <- semicolonToken
       s <- getState
       if getIsExecOn s then (do
-        modifyState (insertVariableOnMem (name, getCurrentScope s, ArrayType (getTypeStr t, v, 0, []), False))
+        modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValueArr (ArrayType (getTypeStr t, v, 0, [])), False))
         s <- getState
         liftIO $ print s
         return (t : Id name p : t : [e])) else return []

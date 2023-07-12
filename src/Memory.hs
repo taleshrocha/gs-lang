@@ -125,6 +125,10 @@ getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
 getDefaultValue (Type "array" (l, c)) = ArrayType ("int", 2, 0, []) --Temporary getDefaultValue 
 getDefaultValue (Type "matrix" (l, c)) = MatrixType (2, 0, [[]])
+getDefaultValue (Type "matrix" (l, c)) = MatrixType (2, 0, [[]])
+
+getDefaultValueArr :: Types -> Types
+getDefaultValueArr (ArrayType (ts, v, i, [])) = ArrayType (ts, v, i, replicate v (IntType 0))
 
 getTypeStr :: Token -> String
 getTypeStr (Type s _) = s

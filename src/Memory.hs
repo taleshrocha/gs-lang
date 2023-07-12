@@ -191,6 +191,24 @@ convertTypes (IntType v) (FloatType _) = FloatType (fromIntegral v)
 convertTypes type1 _ = type1
 
 
+typeCompatible :: Types -> Token -> Bool
+typeCompatible (ArrayType ("int", _, _, _)) (Int _ _) = True
+typeCompatible (ArrayType ("float", _, _, _)) (Float _ _) = True
+typeCompatible (ArrayType ("float", _, _, _)) (Int _ _) = True
+typeCompatible (ArrayType ("bool", _, _, _)) (Bool _ _) = True
+typeCompatible (ArrayType ("string", _, _, _)) (String _ _) = True
+typeCompatible (ArrayType ("char", _, _, _)) (Char _ _) = True
+
+typeCompatible _ _ = False
+
+
+arrayFull :: Types -> Bool
+arrayFull (ArrayType (_, m, c, _)) =
+  if(m == c) then
+    True
+  else 
+    False
+
 
 -- Show --------------------------------
 

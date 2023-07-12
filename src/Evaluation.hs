@@ -121,7 +121,10 @@ eval _ _ _ _ = error "Error on eval _ -- cannot match types!"
 
 
 arrangeAdd :: Memory -> Types -> Token -> Types
-arrangeAdd s (ArrayType (t, m, c, [])) y = ArrayType (t, m, c, [getType y s])
+arrangeAdd s (ArrayType ("float", m, c, [])) (Int y p) = ArrayType ("float", m, c+1, [convertTypes (getType (Int y p) s) (FloatType 0.0)])
+arrangeAdd s (ArrayType ("float", m, c, l)) (Int y p) = ArrayType ("float", m, c+1, l ++ [convertTypes (getType (Int y p) s) (FloatType 0.0)])
+arrangeAdd s (ArrayType (t, m, c, [])) y = ArrayType (t, m, c+1, [getType y s])
+arrangeAdd s (ArrayType (t, m, c, l)) y = ArrayType (t, m, c+1, l ++ [getType y s])
 
 arrangeEval :: Memory -> Types -> Token -> Token -> Types
 arrangeEval s (ArrayType (t, m, c, [])) (AddUnary _) y = ArrayType (t, m, c, [getType y s])

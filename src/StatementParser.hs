@@ -164,7 +164,13 @@ addEle = do
   --var <- getVariable (getName id) (getCurrentScope s) (getVariables s)
   --arr <- getVariableType var
   --arr ++ exp
-  updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
+  if(typeCompatible (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp) then
+    if(arrayFull (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s)))) then
+        error "Array full, can't add more :("
+      else
+      updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
+  else
+    error "Can't add this element on this array -- Incompatible type"
   return ([id])
 
 ifStatement :: ParsecT [Token] Memory IO [Token]

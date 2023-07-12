@@ -28,61 +28,42 @@ varDecl :: ParsecT [Token] Memory IO [Token]
 varDecl = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
   t <- typeToken 
-  (Id name p) <- idToken
-  m <- optionMaybe matDec
-  a <- optionMaybe (arrayDec <|> matDec)
-  b <- optionMaybe assignToken
-  case b of
-    Just b -> do
-      exp <- exprs
+  bl <- optionMaybe bracketLToken
+  case bl of
+    Just bl -> do
+      (Int v _) <- intToken
+      br <- bracketRToken
+      (Id name p) <- idToken
       e <- semicolonToken
       s <- getState
       if getIsExecOn s then (do
-        modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+        modifyState (insertVariableOnMem (name, getCurrentScope s, ArrayType (getTypeStr t, v, 0, []), False))
         s <- getState
-        updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
-        --liftIO $ print s
-        return (t : Id name p : b : exp : [e])) else return []
-
+        liftIO $ print s
+        return (t : Id name p : t : [e])) else return []
     Nothing -> do
-      case a of
-        Just a -> do --Since it is having problems to recon, need to know if matDec or arrDec
-          --if(a /= intToken) then --Possible solution, see if is intToken or not
-          --  error "why"
-          --else
-          --  error "Go"
-          (Int v _) <- intToken
-          br <- bracketRToken
-          e <- semicolonToken
-          s <- getState
-          if getIsExecOn s then (do
-            modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+        (Id name p) <- idToken
+        b <- optionMaybe assignToken
+        case b of
+          Just b -> do
+            exp <- exprs
+            e <- semicolonToken
             s <- getState
-            --getType a s => IntType Int
-            updateState (updateVarOnMem (name, getCurrentScope s, ArrayType (getTypeStr a, v, 0, []), False))
-            --liftIO $ print s
-            return (t : Id name p : a : [e])) else return []
-        Nothing -> do
-          case m of
-            Just m -> do
+            if getIsExecOn s then (do
+              modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+              s <- getState
+              updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
+              s <- getState
+              liftIO $ print s
+              return (t : Id name p : b : exp : [e])) else return []
+          Nothing -> do
               e <- semicolonToken
               s <- getState
               if getIsExecOn s then (do
                 modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
                 s <- getState
-                --getType a s => IntType Int
-                updateState (updateVarOnMem (name, getCurrentScope s, MatrixType (getIntValue m, 0, [[]]), False))
-                --liftIO $ print s
+                liftIO $ print s
                 return (t : Id name p : [e])) else return []
-            Nothing -> do
-              e <- semicolonToken
-              s <- getState
-              if getIsExecOn s then (do
-                modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
-                s <- getState
-                --liftIO $ print s
-                return (t : Id name p : [e])) else return []
-    
 
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do

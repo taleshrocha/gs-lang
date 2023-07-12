@@ -15,7 +15,7 @@ import Data.Typeable (typeOf)
 
 stmts :: ParsecT [Token] Memory IO [Token]
 stmts = try (do
-    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> returnExp <|> addEle
+    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> returnExp <|> addEle <|> addArr
     b <- stmts
     return (a ++ b))
   <|> (do
@@ -29,7 +29,8 @@ varDecl = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
   t <- typeToken 
   (Id name p) <- idToken
-  a <- optionMaybe arrayDec
+  m <- optionMaybe matDec
+  a <- optionMaybe (arrayDec <|> matDec)
   b <- optionMaybe assignToken
   case b of
     Just b -> do
@@ -45,7 +46,11 @@ varDecl = do
 
     Nothing -> do
       case a of
-        Just a -> do
+        Just a -> do --Since it is having problems to recon, need to know if matDec or arrDec
+          --if(a /= intToken) then --Possible solution, see if is intToken or not
+          --  error "why"
+          --else
+          --  error "Go"
           (Int v _) <- intToken
           br <- bracketRToken
           e <- semicolonToken
@@ -58,13 +63,25 @@ varDecl = do
             --liftIO $ print s
             return (t : Id name p : a : [e])) else return []
         Nothing -> do
-          e <- semicolonToken
-          s <- getState
-          if getIsExecOn s then (do
-            modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
-            s <- getState
-            --liftIO $ print s
-            return (t : Id name p : [e])) else return []
+          case m of
+            Just m -> do
+              e <- semicolonToken
+              s <- getState
+              if getIsExecOn s then (do
+                modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+                s <- getState
+                --getType a s => IntType Int
+                updateState (updateVarOnMem (name, getCurrentScope s, MatrixType (getIntValue m, 0, [[]]), False))
+                --liftIO $ print s
+                return (t : Id name p : [e])) else return []
+            Nothing -> do
+              e <- semicolonToken
+              s <- getState
+              if getIsExecOn s then (do
+                modifyState (insertVariableOnMem (name, getCurrentScope s, getDefaultValue t, False))
+                s <- getState
+                --liftIO $ print s
+                return (t : Id name p : [e])) else return []
     
 
 assign :: ParsecT [Token] Memory IO [Token]
@@ -190,6 +207,42 @@ getEle = do
     error "Can't get this element on this array -- wrong index?"
 
 
+
+addArr :: ParsecT [Token] Memory IO [Token]
+addArr = do
+  ad <- addArrayToken
+  c <- doubleColonToken
+  id <- idToken
+  pl <- parLToken
+  arrId <- idToken
+  pr <- parRToken
+  sc <- semicolonToken
+  s <- getState
+
+  if(arrayFull (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s)))) then
+    error "Matrix full, can't add more :("
+  else
+    updateState (updateVarOnMem (getName id, getCurrentScope s, matrixAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) (getVariableType (getVariable (getName arrId) (getCurrentScope s) (getVariables s))), False))
+  return ([id])
+  
+
+--getEle :: ParsecT [Token] Memory IO Token
+--getEle = do
+--  get <- getElementToken
+--  c <- doubleColonToken
+--  id <- idToken
+--  pl <- parLToken
+--  exp <- exprs
+--  pr <- parRToken
+--  s <- getState
+--  if(getCurrentSize (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) > getIntValue exp) then
+--    return (retEleFromArr (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) (getIntValue exp))
+    --updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
+--  else
+--    error "Can't get this element on this array -- wrong index?"
+
+
+
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do
   --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "ifStatement"
@@ -307,3 +360,10 @@ arrayDec = try (do
   --n <- intToken
   --br <- bracketRToken
   return (t))
+  
+matDec :: ParsecT [Token] Memory IO Token
+matDec = try (do
+  bl <- bracketLToken
+  n <- intToken
+  br <- bracketRToken
+  return (n))

@@ -68,7 +68,7 @@ tokens :-
   "%"                                            { \p s -> Mod (getLC p) }
   addElement                                     { \p s -> AddElement (getLC p) }
   getElement                                     { \p s -> GetElement (getLC p) }
-  addArray                                       { \p s -> AddElement (getLC p) }
+  addArray                                       { \p s -> AddArray (getLC p) }
   getArray                                       { \p s -> GetArray (getLC p) }
 
   -- Relational Tokens

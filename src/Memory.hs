@@ -211,6 +211,11 @@ arrayFull (ArrayType (_, m, c, _)) =
     True
   else 
     False
+arrayFull (MatrixType (m, c, _)) =
+  if(m == c) then
+    True
+  else 
+    False
     
 getCurrentSize :: Types -> Int
 getCurrentSize (ArrayType (_, _, c, _)) = c
@@ -248,3 +253,5 @@ instance Show Types where
   show (RecordType (name, fields)) = "(RecordType, " ++ show (name, fields) ++ ")"
   show (ArrayType (typeName, maxSize, currentSize, load)) =
     "(ArrayType, " ++ show (typeName, maxSize, currentSize, load) ++ ")"
+  show (MatrixType (maxSize, currentSize, load)) =
+    "(ArrayType, " ++ show (maxSize, currentSize, load) ++ ")"

@@ -81,16 +81,22 @@ updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : 
         ++ ".")
   else (id2, scope2, type2, isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
 
-updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, (ArrayType (ts, v, i, vals)), isConst2) : tail) =
+updateVarOnMemArr :: Variable -> Int -> Memory -> Memory
+updateVarOnMemArr var idx (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, updateVariableArr var idx varTable, funcTable, typeTable, isOn)
+
+updateVariableArr :: Variable -> Int -> [Variable] -> [Variable]
+updateVariableArr var idx[] = error ("Error on Memory -- updateVariableArr: variable (" ++ show var ++ ") not declared!")
+updateVariableArr (id1, scope1, type1, isConst1) idx ((id2, scope2, (ArrayType (ts, v, i, vals)), isConst2) : tail) =
   if id1 == id2 && scope1 == scope2 then
-    if isConst2 == True then error ("Error on Memory -- updateVariable: trying to change the value of the constant!")
+    if isConst2 == True then error ("Error on Memory -- updateVariableArr: trying to change the value of the constant!")
     else do
-      type2 <- retEleFromArr vals i
-      if compatible type1 type2 then (id1, scope1, addElementAtIndex convertTypes type1 type2 i vals, isConst2) : tail
-      else error ("Error on Memory -- updateVariable: variable"
+      let type2 = retEleFromArr vals idx
+      if compatible type1 type2 then (id1, scope1, (ArrayType (ts, v, i, (addElementAtIndex (convertTypes type1 type2) idx vals))), isConst2) : tail
+      else error ("Error on Memory -- updateVariableArr: variable"
         ++ " is not compatible"
         ++ ".")
-  else (id2, scope2, (ArrayType (ts, v, i, vals)), isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
+  else (id2, scope2, (ArrayType (ts, v, i, vals)), isConst2) : updateVariableArr (id1, scope1, type1, isConst1) idx tail
 
 addElementAtIndex :: Types -> Int -> [Types] -> [Types]
 addElementAtIndex value index list

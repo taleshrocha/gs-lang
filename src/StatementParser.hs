@@ -15,7 +15,7 @@ import Data.Typeable (typeOf)
 
 stmts :: ParsecT [Token] Memory IO [Token]
 stmts = try (do
-    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> returnExp <|> addEle <|> addArr
+    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> returnExp
     b <- stmts
     return (a ++ b))
   <|> (do
@@ -74,16 +74,25 @@ assign = do
     Just bl -> do
       (Int v _) <- intToken
       br <- bracketRToken
-    --Nothing -> do
-    b <- assignToken
-    exp <- exprs
-    d <- semicolonToken
-    s <- getState
-    if getIsExecOn s then (do
-      updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
+      b <- assignToken
+      exp <- exprs
+      d <- semicolonToken
       s <- getState
-      --liftIO $ print s
-      return (Id name p : b : exp : [d])) else return []
+      if getIsExecOn s then (do
+        updateState (updateVarOnMemArr (name, getCurrentScope s, getType exp s, False) v)
+        s <- getState
+        liftIO $ print s
+        return (Id name p : b : exp : [d])) else return []
+    Nothing -> do
+      b <- assignToken
+      exp <- exprs
+      d <- semicolonToken
+      s <- getState
+      if getIsExecOn s then (do
+        updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False))
+        s <- getState
+        liftIO $ print s
+        return (Id name p : b : exp : [d])) else return []
 
 
 printFun :: ParsecT [Token] Memory IO [Token]
@@ -318,7 +327,7 @@ expT = try (do
   ex <- exprs
   pr <- parRToken
   return ex
-  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken <|> getEle -- <|> arrayToken <|> matrixToken
+  ) <|> idToken <|> intToken <|> floatToken <|> boolToken <|> stringToken
   
 arrayDec :: ParsecT [Token] Memory IO Token
 arrayDec = try (do

@@ -158,20 +158,20 @@ turnType (StringType _) s = (StringType s)
 
   
 
-getEle :: ParsecT [Token] Memory IO Token
-getEle = do
-  get <- getElementToken
-  c <- doubleColonToken
-  id <- idToken
-  pl <- parLToken
-  exp <- exprs
-  pr <- parRToken
-  s <- getState
-  if(getCurrentSize (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) > getIntValue exp) then
-    return (retEleFromArr (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) (getIntValue exp))
-    --updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
-  else
-    error "Can't get this element on this array -- wrong index?"
+--getEle :: ParsecT [Token] Memory IO Token
+--getEle = do
+--  get <- getElementToken
+--  c <- doubleColonToken
+--  id <- idToken
+--  pl <- parLToken
+--  exp <- exprs
+--  pr <- parRToken
+--  s <- getState
+--  if(getCurrentSize (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) > getIntValue exp) then
+--    return (retEleFromArr (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) (getIntValue exp))
+--    --updateState (updateVarOnMem (getName id, getCurrentScope s, arrangeAdd s (getVariableType (getVariable (getName id) (getCurrentScope s) (getVariables s))) exp, False))
+--  else
+--    error "Can't get this element on this array -- wrong index?"
 
 
 

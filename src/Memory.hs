@@ -83,16 +83,14 @@ updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, type2, isConst2) : 
 
 updateVariable (id1, scope1, type1, isConst1) ((id2, scope2, (ArrayType (ts, v, i, vals)), isConst2) : tail) =
   if id1 == id2 && scope1 == scope2 then
-    if isConst2 == True then error ("Error on Memory -- updateVariable: trying to change the value of the " ++ show (id2, scope2, type2, True) ++ " constant!")
+    if isConst2 == True then error ("Error on Memory -- updateVariable: trying to change the value of the constant!")
     else do
-      val <- retEleFromArr vals i
-      if compatible type2 val then (id1, scope1, addElementAtIndex convertTypes type1 type2 i vals, isConst2) : tail
-      else error ("Error on Memory -- updateVariable: variable "
-        ++ show (id2, scope2, type2, False)
-        ++ " is not compatible with Type "
-        ++ show type1
+      type2 <- retEleFromArr vals i
+      if compatible type1 type2 then (id1, scope1, addElementAtIndex convertTypes type1 type2 i vals, isConst2) : tail
+      else error ("Error on Memory -- updateVariable: variable"
+        ++ " is not compatible"
         ++ ".")
-  else (id2, scope2, type2, isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
+  else (id2, scope2, (ArrayType (ts, v, i, vals)), isConst2) : updateVariable (id1, scope1, type1, isConst1) tail
 
 addElementAtIndex :: Types -> Int -> [Types] -> [Types]
 addElementAtIndex value index list

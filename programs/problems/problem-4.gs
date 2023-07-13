@@ -8,7 +8,7 @@ int main() begin
   //int a := 2;
   //print(a);
 
-  /rational.numerador := 0;
+  //rational.numerador := 0;
   //rational.denominador := 1;
 
   //print(rational.numerador, ratinal.denominador);

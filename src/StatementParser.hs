@@ -14,16 +14,20 @@ import System.IO.Unsafe
 import Text.Printf (printf)
 import Data.Typeable (typeOf)
 import Control.Monad (when)
+import GHC.Core.TyCon.Env (nameEnvElts)
+import Data.Bits
 
 stmts :: ParsecT [Token] Memory IO [Token]
 stmts = try (do
-    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> whileStatement <|> procedureCall <|> returnExp
+    a <- varDecl <|> assign <|> printFun <|> scanFun <|> ifStatement <|> whileStatement
+    s <- getInput
+    liftIO $ print (show s)
     b <- stmts
     return (a ++ b))
   <|> try (do
-    a <- functionCall
+    a <- returnExp 
     b <- stmts
-    return (a : b))
+    return (a ++ b))
   <|> continueBreakStatement
   <|> expressionStatement
   <|> return []
@@ -310,6 +314,8 @@ assign = do
                 updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False, ("",0,False))))
               return (Id name p : b : exp : [d])
 
+----- Print e Scan ------------------------------------
+
 printFun :: ParsecT [Token] Memory IO [Token]
 printFun = try (do
   -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
@@ -380,6 +386,8 @@ turnType (BoolType _) s = (BoolType (read s))
 turnType (CharType _) s = (CharType (read s))
 turnType (StringType _) s = (StringType s)
 turnType _ _ = error("Incompatible types on scan!")
+
+----- If ------------------------------------
 
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do
@@ -457,6 +465,8 @@ elseStatement = try (do
   st <- stmts
   return (f : st)) <|> return []
 
+----- While ------------------------------------
+
 whileStatement :: ParsecT [Token] Memory IO [Token]
 whileStatement = do
   -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "whileStatement"
@@ -523,78 +533,7 @@ continueStatement = do
     st <- stmts
     return (cont : sc : st))
 
-returnExp :: ParsecT [Token] Memory IO [Token]
-returnExp = do
-  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "returnExp"
-  a <- returnToken
-  exp <- expression
-  c <- semicolonToken
-  return (a : exp : [c])
-
-paramsParse :: ParsecT [Token] Memory IO [Token]
-paramsParse = try (do
-  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "paramsParse"
-  ct <- optionMaybe constToken
-  let isConst = case ct of
-        Just _  -> True
-        Nothing -> False
-  t <- typeToken
-  pointer <- optionMaybe multToken
-  case pointer of
-    Just pointer -> (do
-      id <- idToken
-      co <- optionMaybe commaToken
-      case co of
-        Just co -> (do
-          paP <- paramsParse
-          return (maybeToToken [ct] ++ t : pointer : id : co : paP))
-
-        Nothing -> return (maybeToToken [ct] ++ t : pointer : [id]))
-
-    Nothing -> (do
-      id <- idToken
-      co <- optionMaybe commaToken
-      case co of
-        Just co -> (do
-          paP <- paramsParse
-          return (maybeToToken [ct] ++ t : id : co : paP))
-
-        Nothing -> return (maybeToToken [ct] ++ t : [id]))) <|> return []
-
-maybeToToken :: [Maybe Token] -> [Token]
-maybeToToken (maybeValue : tail)
-  | null tail =
-     case maybeValue of
-        Just x -> [x]
-        Nothing -> []
-
-  | otherwise =
-     case maybeValue of
-        Just x -> x : maybeToToken tail
-        Nothing -> maybeToToken tail
-
-createVarFromFunc :: String -> Memory -> ParsecT [Token] Memory IO [Token]
-createVarFromFunc name (currentScope, scopes, varTable, (funcName, ret, params, body) : tail, typeTable, isOn)
-  | name == funcName = do
-      aux <- getInput
-      s <- getState
-      setInput params
-      setInput aux
-      return []
-  | null tail = error ("Error on Memory -- getFunctionBody: function (" ++ show name ++ ") not declared!")
-  | otherwise = createVarFromFunc name (currentScope, scopes, varTable, tail, typeTable, isOn)
-
-paramsParseCall :: String -> ParsecT [Token] Memory IO [Token]
-paramsParseCall name = try (do
-  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "paramsParseCall"
-  id <- idToken
-  co <- optionMaybe commaToken
-  case co of
-    Just co -> (do
-      paP <- paramsParseCall name
-      return (id : co : paP))
-
-    Nothing -> return [id])
+----- Subprograms ------------------------------------
 
 functionCall :: ParsecT [Token] Memory IO Token
 functionCall = do
@@ -603,7 +542,8 @@ functionCall = do
   updateState ( insertScope (getCurrentScope s + 1) )
   (Id name p) <- idToken
   pl <- parLToken
-  pa <- paramsParseCall name
+  s <- getState
+  pa <- createVarFromFunc name s
   pr <- parRToken
   aux <- getInput
   s <- getState
@@ -643,8 +583,9 @@ procedureCall = do
   s <- getState
   updateState ( insertScope (getCurrentScope s + 1) )
   (Id name p) <- idToken
+  s <- getState
   pl <- parLToken
-  pa <- paramsParseCall name
+  pa <- createVarFromFunc name s
   pr <- parRToken
   sc <- semicolonToken
   aux <- getInput
@@ -658,7 +599,116 @@ procedureCall = do
   updateState (cleanMemFromScope (getCurrentScope s))
   s <- getState
   updateState removeScope
-  return (Id name p : pl : pa ++ pr : sc : st ++ et : [proct])
+  return (Id name p : pa ++ sc : st ++ et : [proct])
+
+parseParams :: ParsecT [Token] Memory IO [Token]
+parseParams = try (do
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "parseParams"
+  ct <- optionMaybe constToken
+  let isConst = case ct of
+        Just _  -> True
+        Nothing -> False
+  t <- typeToken
+  pointer <- optionMaybe amperToken
+  (Id name p) <- idToken
+  case pointer of
+    Just pointer -> (do
+      co <- optionMaybe commaToken
+      case co of
+        Just co -> (do
+          s <- getState
+          when (getIsExecOn s) (do
+            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,True))))
+          paP <- parseParams
+          return (Id name p : paP))
+
+        Nothing -> (do
+          s <- getState
+          when (getIsExecOn s) (do
+            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,True))))
+          return [Id name p]))
+
+    Nothing -> (do
+      co <- optionMaybe commaToken
+      case co of
+        Just co -> (do
+          s <- getState
+          when (getIsExecOn s) (do
+            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
+          paP <- parseParams
+          return (Id name p : paP))
+
+        Nothing -> (do
+          s <- getState
+          when (getIsExecOn s) (do
+            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
+          return [Id name p]))) <|> return []
+
+parseParamsCall :: ParsecT [Token] Memory IO [Token]
+parseParamsCall = try (do
+  st <- try expression <|> idToken
+  co <- optionMaybe commaToken
+  case co of
+    Just co -> (do
+      paP <- parseParamsCall
+      return (st : paP))
+
+    Nothing -> return [st]) <|> return []
+
+createVarFromFunc :: String -> Memory -> ParsecT [Token] Memory IO [Token]
+createVarFromFunc name (currentScope, scopes, varTable, (funcName, ret, params, body) : tail, typeTable, isOn)
+  | name == funcName = do
+      aux <- getInput
+      s <- getState
+      setInput params
+      st <- parseParams
+      setInput aux
+      stt <- parseParamsCall
+      vT <- varTrain stt st
+      return (st ++ stt)
+  | null tail = error ("Error on Memory -- getFunctionBody: subprogram (" ++ show name ++ ") not declared!")
+  | otherwise = createVarFromFunc name (currentScope, scopes, varTable, tail, typeTable, isOn)
+
+testParam :: Token -> String
+testParam (Id name p) = name
+testParam _ = error "Error on Memory -- getFunctionBody: invalid param!"
+
+varTrain :: [Token] -> [Token] -> ParsecT [Token] Memory IO [Token]
+varTrain [] [] = return []
+varTrain (tk1 : tail1) [] = error "Error on StatementParser -- functionCall: invalid number of params!"
+varTrain [] ((Id name p) : tail2) = error "Error on StatementParser -- functionCall: invalid number of params!"
+
+varTrain (tk1 : tail1) ((Id name p) : tail2)  = do
+      s <- getState
+      let var = getVariableMem name (getCurrentScope s) s
+      if isVariablePointer var then (do
+        s <- getState
+        when (getIsExecOn s) (do
+          updateState (updatePointerOnMem name (getCurrentScope s) (testParam tk1, getVariableScope (getVariableMem (testParam tk1) (getCurrentScope s - 1) s), True))
+          s <- getState
+          updateState (updateVarOnMem (name, getCurrentScope s, getTypeAlt (Id (testParam tk1) p) (getCurrentScope s-1) s, False, (testParam tk1, getVariableScope (getVariableMem (testParam tk1) (getCurrentScope s - 1) s),True))))
+        st <- varTrain tail1 tail2
+        return (Id name p : st))
+      else (do
+        s <- getState
+        when (getIsExecOn s) (do
+          updateState (updateVarOnMem (name, getCurrentScope s, getTypeAlt tk1 (getCurrentScope s-1) s, False, ("", 2,True))))
+        st <- varTrain tail1 tail2
+        return (Id name p : st))
+
+----- Misc ------------------------------------
+
+maybeToToken :: [Maybe Token] -> [Token]
+maybeToToken (maybeValue : tail)
+  | null tail =
+     case maybeValue of
+        Just x -> [x]
+        Nothing -> []
+
+  | otherwise =
+     case maybeValue of
+        Just x -> x : maybeToToken tail
+        Nothing -> maybeToToken tail
 
 expressionStatement :: ParsecT [Token] Memory IO [Token]
 expressionStatement = try (do
@@ -667,6 +717,23 @@ expressionStatement = try (do
   sc <- semicolonToken
   st <- stmts
   return (exp : sc : st)) <|> return []
+
+returnExp :: String -> ParsecT [Token] Memory IO [Token]
+returnExp name = do
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "returnExp"
+  a <- returnToken
+  exp <- expression
+  c <- semicolonToken
+  s <- getState
+  if getIsExecOn s then (do
+    updateState setExecOnOff
+    st <- stmts
+    s <- getState
+    updateState (setReturn name (getTypeAux exp (getCurrentScope s) (getVariables s)))
+    return (a : exp : [c]))
+  else (do
+    st <- stmts
+    return (a : exp : [c]))
 
 -------- Expressions ----------------------------------------------------------
 

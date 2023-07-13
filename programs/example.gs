@@ -1,22 +1,21 @@
+int k := 5;
+
+procedure A(int l, float tr, bool g)
+  print(k);
+  tr:=97;
+  print(tr++);
+end procedure
+
+bool c;
+
 int main() begin
-  float x := 5;
-  float y := 4;
-  int c := 3;
-
-  if (x>=y)
-    if (x>y)
-      print((x**2 - y) + c);
-    end if
-
-    if (y>x)
-      print(x);
-    end if
-  end if
-
-  if (c>y)
-    print(c);
-    print(y);
-  end if
-
-  print(c+y);
+  //float m := 9, k := 8;
+  int x := 5;
+  float y := x;
+  print(y);
+  A(x, y, False);
+  int c;
+  print(x);
+  print(y);
+  print(y);
 end main

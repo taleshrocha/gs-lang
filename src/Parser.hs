@@ -54,11 +54,15 @@ function = do
   ret <- typeToken
   (Id name p) <- idToken
   pl <- parLToken
-  pa <- paramsParse
+  updateState setExecOnOff
+  pa <- parseParams
+  updateState setExecOnOff
+  s<- getState
+  liftIO $ print (show pa)
   pr <- parRToken
   aux <- getInput
   s <- getState
-  modifyState (insertFunctionOnMem (name, (False, getType ret s), pa, aux))
+  modifyState (insertFunctionOnMem (name,  (False, getTypeAux ret (getCurrentScope s) (getVariables s), ret), pa, aux))
   s <- getState
   if getIsExecOn s then (do
     updateState setExecOnOff
@@ -76,14 +80,17 @@ function = do
 procedure :: ParsecT [Token] Memory IO [Token]
 procedure = do
   -- liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "procedure"
-  prod <- procedureToken
+  (Procedure p2) <- procedureToken
   (Id name p) <- idToken
   pl <- parLToken
-  pa <- paramsParse
-  pr <- parRToken
   aux <- getInput
+  updateState setExecOnOff
+  pa <- parseParams
+  updateState setExecOnOff
+  pr <- parRToken
+  aux2 <- getInput
   s <- getState
-  modifyState (insertFunctionOnMem (name, (False, VoidType), pa, aux))
+  modifyState (insertFunctionOnMem (name, (False, VoidType,Procedure p2), aux, aux2))
   s <- getState
   if getIsExecOn s then (do
     updateState setExecOnOff
@@ -91,12 +98,12 @@ procedure = do
     updateState setExecOnOff
     et <- endToken
     funt <- procedureToken
-    return (prod : Id name p : pl : pa ++ pr : st ++ et : [funt]))
+    return (Procedure p2 : Id name p : pl : pa ++ pr : st ++ et : [funt]))
   else (do
     st <- stmts
     et <- endToken
     funt <- procedureToken
-    return (prod : Id name p : pl : pa ++ pr : st ++ et : [funt]))
+    return (Procedure p2 : Id name p : pl : pa ++ pr : st ++ et : [funt]))
 
 record :: ParsecT [Token] Memory IO [Token]
 record = do

@@ -28,6 +28,11 @@ stmts = try (do
   <|> expressionStatement
   <|> return []
 
+----- Declaração de variáveis ------------------------------------
+
+decl :: ParsecT [Token] Memory IO [Token]
+decl = try setPointers <|> varDecl
+
 setPointers ::  ParsecT [Token] Memory IO [Token]
 setPointers = try (do
   (Id name1 p1) <- idToken
@@ -38,9 +43,9 @@ setPointers = try (do
   case co of
     Just co -> (do
       s <- getState
+      st <- setPointers
       when (getIsExecOn s) (do
         updateState (insertVariableOnMem (getType (Id name2 p2) s) (name1, getCurrentScope s, getVariableType (getVariableMem name2 (getCurrentScope s) s) , getIsVariableConst (getVariableMem name2 (getCurrentScope s) s), (name2, getVariableScope (getVariableMem name2 (getCurrentScope s) s), True))))
-      st <- setPointers
       return (Id name1 p1 : b : amper : Id name2 p2 : co : st))
 
     Nothing -> (do
@@ -50,23 +55,13 @@ setPointers = try (do
         updateState (insertVariableOnMem (getType (Id name2 p2) s) (name1, getCurrentScope s, getVariableType (getVariableMem name2 (getCurrentScope s) s) , getIsVariableConst (getVariableMem name2 (getCurrentScope s) s), (name2, getVariableScope (getVariableMem name2 (getCurrentScope s) s), True))))
       return (Id name1 p1 : b : amper : Id name2 p2 : [e]))) <|> return []
 
-fieldsParser :: ParsecT [Token] Memory IO [(String, Types)]
-fieldsParser = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "fieldsParser"
-  t <- typeToken
-  (Id name p) <- idToken
-  e <- semicolonToken
-  fds <- fieldsParser <|> return []
-  return ((name, getDefaultValue t) : fds)
-
 varDecl :: ParsecT [Token] Memory IO [Token]
 varDecl = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDecl"
   ct <- optionMaybe constToken
   let isConst = case ct of
         Just _  -> True
         Nothing -> False
-
   r <- optionMaybe recordToken
   case r of
     Just r -> do
@@ -82,6 +77,7 @@ varDecl = do
       case ct of
         Just ct  -> return (ct : t : Id name p : [e])
         Nothing -> return (t : Id name p : [e])
+
     Nothing -> do
       t <- typeToken
       (Id name p) <- idToken
@@ -94,9 +90,9 @@ varDecl = do
           case co of
             Just co -> (do
               s <- getState
+              st <- try varDecl <|> varDeclRemaining t
               when (getIsExecOn s) (do
                 updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False))))
-              st <- try varDecl <|> varDeclRemaining t
               case ct of
                 Just ct  -> return (ct : t : Id name p : b : exp : co : st)
                 Nothing -> return (t : Id name p : b : exp : co : st))
@@ -115,9 +111,9 @@ varDecl = do
           case co of
             Just co -> (do
               s <- getState
+              st <- try varDecl <|> varDeclRemaining t
               when (getIsExecOn s) (do
                 updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
-              st <- try varDecl <|> varDeclRemaining t
               case ct of
                 Just ct  -> return (ct : t : Id name p : co : st)
                 Nothing -> return (t : Id name p : co : st))
@@ -133,9 +129,13 @@ varDecl = do
 
 varDeclRemaining :: Token -> ParsecT [Token] Memory IO [Token]
 varDeclRemaining t@(Type _ _) = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDeclRemaning"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "varDeclRemaning"
   ct <- optionMaybe constToken
   let isConst = case ct of
+        Just _  -> True
+        Nothing -> False
+  t1 <- optionMaybe typeToken
+  let hasType = case t1 of
         Just _  -> True
         Nothing -> False
   (Id name p) <- idToken
@@ -149,8 +149,8 @@ varDeclRemaining t@(Type _ _) = do
         Just co -> (do
           s <- getState
           when (getIsExecOn s) (do
-            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False))))
-          st <- try varDecl <|> varDeclRemaining t
+            updateState (insertVariableOnMem (getType (returnType hasType t1 t) s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False))))
+          st <- try varDecl <|> varDeclRemaining (returnType hasType t1 t)
           case ct of
             Just ct  -> return (ct : t : Id name p : b : exp : co : st)
             Nothing -> return (t : Id name p : b : exp : co : st))
@@ -159,7 +159,7 @@ varDeclRemaining t@(Type _ _) = do
           e <- semicolonToken
           s <- getState
           when (getIsExecOn s) (do
-            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False))))
+            updateState (insertVariableOnMem (getType (returnType hasType t1 t) s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False))))
           case ct of
             Just ct  -> return (ct : t : Id name p : b : exp : [e])
             Nothing -> return (t : Id name p : b : exp : [e]))
@@ -170,7 +170,7 @@ varDeclRemaining t@(Type _ _) = do
         Just co -> (do
           s <- getState
           when (getIsExecOn s) (do
-            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
+            updateState (insertVariableOnMem (getType (returnType hasType t1 t) s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
           st <- try varDecl <|> varDeclRemaining t
           case ct of
             Just ct  -> return (ct : t : Id name p : co : st)
@@ -180,14 +180,33 @@ varDeclRemaining t@(Type _ _) = do
           e <- semicolonToken
           s <- getState
           when (getIsExecOn s) (do
-            updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
+            updateState (insertVariableOnMem (getType (returnType hasType t1 t) s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
           case ct of
             Just ct  -> return (ct : t : Id name p : [e])
             Nothing -> return (t : Id name p : [e]))
 
+returnType :: Bool -> Maybe Token -> Token -> Token
+returnType hasType t1 t2 = do
+  if hasType then (do
+    case t1 of
+      Just x -> x
+      Nothing -> Void (0,0))
+  else t2
+
+fieldsParser :: ParsecT [Token] Memory IO [(String, Types)]
+fieldsParser = do
+  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "fieldsParser"
+  t <- typeToken
+  (Id name p) <- idToken
+  e <- semicolonToken
+  fds <- fieldsParser <|> return []
+  return ((name, getDefaultValue t) : fds)
+
+----- Assign ------------------------------------
+
 assign :: ParsecT [Token] Memory IO [Token]
 assign = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "assign"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "assign"
   (Id name p) <- idToken
   b <- assignToken
   exp <- expression
@@ -208,7 +227,7 @@ assign = do
 
 printFun :: ParsecT [Token] Memory IO [Token]
 printFun = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printFun"
   a <- printToken
   pl <- parLToken
   exp <- expression
@@ -224,7 +243,6 @@ printFun = try (do
   pr <- parRToken
   c <- semicolonToken
   s <- getState
-  -- liftIO $ print( show s)
   when (getIsExecOn s) (do
     s <- getState
     liftIO $ print (getType exp s))
@@ -232,7 +250,7 @@ printFun = try (do
 
 printRemaining :: ParsecT [Token] Memory IO [Token]
 printRemaining = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printRemaining"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "printRemaining"
   exp <- expression
   cmm <- commaToken
   prt <- printRemaining
@@ -250,7 +268,7 @@ printRemaining = try (do
 
 scanFun :: ParsecT [Token] Memory IO [Token]
 scanFun = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "scanFun"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "scanFun"
   a <- scanToken
   pl <- parLToken
   b <- idToken
@@ -265,7 +283,7 @@ scanFun = do
 
 ifStatement :: ParsecT [Token] Memory IO [Token]
 ifStatement = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "ifStatement"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "ifStatement"
   f <- ifToken
   pl <- parLToken
   exp <- expression
@@ -303,7 +321,7 @@ ifStatement = do
 
 elifStatement :: ParsecT [Token] Memory IO [Token]
 elifStatement = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "elifStatement"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "elifStatement"
   f <- elifToken
   pl <- parLToken
   exp <- expression
@@ -334,14 +352,14 @@ elifStatement = try (do
 
 elseStatement :: ParsecT [Token] Memory IO [Token]
 elseStatement = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "elseStatement"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "elseStatement"
   f <- elseToken
   st <- stmts
   return (f : st)) <|> return []
 
 whileStatement :: ParsecT [Token] Memory IO [Token]
 whileStatement = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "whileStatement"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "whileStatement"
   aux <- getInput
   wh <- whileToken
   pl <- parLToken
@@ -374,13 +392,11 @@ whileStatement = do
       return (wh : pl : exp : pr : st ++ et : [wht]))
 
 continueBreakStatement :: ParsecT [Token] Memory IO [Token]
-continueBreakStatement = do 
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "continueBreakStatement"
-  try breakStatement <|> continueStatement
+continueBreakStatement = try breakStatement <|> continueStatement
 
 breakStatement :: ParsecT [Token] Memory IO [Token]
 breakStatement = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "breakStatement"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "breakStatement"
   brk <- breakToken
   sc <- semicolonToken
   s <- getState
@@ -394,7 +410,7 @@ breakStatement = do
 
 continueStatement :: ParsecT [Token] Memory IO [Token]
 continueStatement = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "continueStatement"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "continueStatement"
   cont <- continueToken
   sc <- semicolonToken
   s <- getState
@@ -409,7 +425,7 @@ continueStatement = do
 
 returnExp :: ParsecT [Token] Memory IO [Token]
 returnExp = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "returnExp"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "returnExp"
   a <- returnToken
   exp <- expression
   c <- semicolonToken
@@ -417,7 +433,7 @@ returnExp = do
 
 paramsParse :: ParsecT [Token] Memory IO [Token]
 paramsParse = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "paramsParse"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "paramsParse"
   ct <- optionMaybe constToken
   let isConst = case ct of
         Just _  -> True
@@ -470,7 +486,7 @@ createVarFromFunc name (currentScope, scopes, varTable, (funcName, ret, params, 
 
 paramsParseCall :: String -> ParsecT [Token] Memory IO [Token]
 paramsParseCall name = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "paramsParseCall"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "paramsParseCall"
   id <- idToken
   co <- optionMaybe commaToken
   case co of
@@ -482,7 +498,7 @@ paramsParseCall name = try (do
 
 functionCall :: ParsecT [Token] Memory IO Token
 functionCall = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "functionCall"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "functionCall"
   s <- getState
   updateState ( insertScope (getCurrentScope s + 1) )
   (Id name p) <- idToken
@@ -504,7 +520,7 @@ functionCall = do
 
 procedureCall :: ParsecT [Token] Memory IO [Token]
 procedureCall = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "procedureCall"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "procedureCall"
   s <- getState
   updateState ( insertScope (getCurrentScope s + 1) )
   (Id name p) <- idToken
@@ -527,7 +543,7 @@ procedureCall = do
 
 expressionStatement :: ParsecT [Token] Memory IO [Token]
 expressionStatement = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expressionStatement"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expressionStatement"
   exp <- expression
   sc <- semicolonToken
   st <- stmts
@@ -540,7 +556,7 @@ expression = try unaryExpression <|> binExpression
 
 unaryExpression :: ParsecT [Token] Memory IO Token
 unaryExpression = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "unaryExpression"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "unaryExpression"
   op <- subToken <|> addUnaryToken <|> subUnaryToken
   expr <- expT
   s <- getState
@@ -567,7 +583,7 @@ processUnary _ _ _ _ mem = mem
 
 binExpression :: ParsecT [Token] Memory IO Token
 binExpression = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "binExpression"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "binExpression"
   exp1f <- exprs
   op <- logicAndToken <|> logicOrToken <|> logicXorToken
   s <- getState
@@ -576,7 +592,7 @@ binExpression = try (do
 
 exprs :: ParsecT [Token] Memory IO Token
 exprs = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "exprs"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "exprs"
   trm1f <- term1
   op <- equalsToken <|> differentToken <|> greaterToken <|> greaterOrEqualToken <|> lessToken <|> lessOrEqualToken
   s <- getState
@@ -585,7 +601,7 @@ exprs = try (do
 
 term1 :: ParsecT [Token] Memory IO Token
 term1 = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term1"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term1"
   trm2f <- term2
   op <- addToken <|> subToken
   s <- getState
@@ -594,7 +610,7 @@ term1 = try (do
 
 term2 :: ParsecT [Token] Memory IO Token
 term2 = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term2"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "term2"
   fctr <- factor
   op <- multToken <|> divToken <|> modToken
   s <- getState
@@ -603,7 +619,7 @@ term2 = try (do
 
 factor :: ParsecT [Token] Memory IO Token
 factor = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "factor"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "factor"
   exT <- expT
   op <- powerToken
   s <- getState
@@ -611,8 +627,8 @@ factor = try (do
   result) <|> expT
 
 expT :: ParsecT [Token] Memory IO Token
-expT = try unaryExpression <|> try functionCall <|> try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expT"
+expT = try functionCall <|> try (do
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expT"
   pl <- parLToken
   ex <- expression
   pr <- parRToken

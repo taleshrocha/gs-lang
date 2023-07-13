@@ -183,6 +183,10 @@ stringToken = tokenPrim show update_pos get_token where
   get_token (String x p) = Just (String x p)
   get_token _       = Nothing
 
+voidToken :: ParsecT [Token] st IO Token
+voidToken = tokenPrim show update_pos get_token where
+  get_token (Void p) = Just (Void p)
+  get_token _       = Nothing
 
 
 assignToken :: ParsecT [Token] st IO Token

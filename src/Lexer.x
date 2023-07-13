@@ -55,6 +55,7 @@ tokens :-
   bool                                           { \p s -> Type s (getLC p) }
   char                                           { \p s -> Type s (getLC p) }
   string                                         { \p s -> Type s (getLC p) }
+  "null"                                         { \p s -> Void (getLC p) }
 
   -- Op Tokens
   ":="                                           { \p s -> Assign (getLC p) }
@@ -135,6 +136,7 @@ data Token =
   Bool Bool       (Int, Int) |
   Char Char       (Int, Int) |
   String  String  (Int, Int) |
+  Void            (Int, Int) |
 
   Assign          (Int, Int) | 
   Add             (Int, Int) | 

@@ -81,24 +81,44 @@ varDecl = do
     Nothing -> do
       t <- typeToken
       (Id name p) <- idToken
-      bl <- optionMaybe bracketLToken
+      bl <- optionMaybe bracketLToken -- Array
       case bl of
         Just bl -> do
           (Int v p) <- intToken
           br <- bracketRToken
-          e <- semicolonToken
-          s <- getState
-          when (getIsExecOn s) (do
-            updateState (
-              insertArrOnMem (name, getCurrentScope s
-              , getDefaultArrayValue (ArrayType (getDefaultValue t, v, 0, []))
-              , isConst, ("", 0, False)))
-            --s <- getState
-            --liftIO $ print s
-            )
-          case ct of
-            Just ct  -> return ((Id name p) : ct : bl : (Int v p) : br : (Id name p) : [e])
-            Nothing -> return ((Id name p) : bl : (Int v p) : br : (Id name p) : [e])
+          bl2 <- optionMaybe bracketLToken -- Matrix
+          case bl2 of
+            Just bl2 -> do
+              (Int v2 p) <- intToken
+              br <- bracketRToken
+              e <- semicolonToken
+              s <- getState
+              when (getIsExecOn s) (do
+                updateState (
+                  insertArrOnMem (name, getCurrentScope s
+                  , getDefaultArrayValue (ArrayType (getDefaultValue t, v, 0, []))
+                  , isConst, ("", 0, False)))
+                --s <- getState
+                --liftIO $ print s
+                )
+              case ct of
+                Just ct  -> return ((Id name p) : ct : bl : (Int v p) : br : (Id name p) : [e])
+                Nothing -> return ((Id name p) : bl : (Int v p) : br : (Id name p) : [e])
+
+            Nothing -> do
+              e <- semicolonToken
+              s <- getState
+              when (getIsExecOn s) (do
+                updateState (
+                  insertArrOnMem (name, getCurrentScope s
+                  , getDefaultArrayValue (ArrayType (getDefaultValue t, v, 0, []))
+                  , isConst, ("", 0, False)))
+                --s <- getState
+                --liftIO $ print s
+                )
+              case ct of
+                Just ct  -> return ((Id name p) : ct : bl : (Int v p) : br : (Id name p) : [e])
+                Nothing -> return ((Id name p) : bl : (Int v p) : br : (Id name p) : [e])
 
         Nothing -> do
           s <- getState

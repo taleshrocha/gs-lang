@@ -94,6 +94,22 @@ insertArray (id1, scope1, type1, isConst1, pt1) ((id2, scope2, (ArrayType (arT, 
 insertArray (id1, scope1, type1, isConst1, pt1) ((id2, scope2, vars, isConst2, pt2) : tail) =
   (id2, scope2, vars, isConst2, pt2) : insertArray (id1, scope1, type1, isConst1, pt1) tail
 
+-- For matrix -----------------------
+
+--insertMatOnMem :: Variable -> Memory -> Memory
+--insertMatOnMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+--  (currentScope, scopes, insertMatrix var varTable, funcTable, typeTable, isOn)
+--
+--insertMatrix :: Variable -> [Variable] -> [Variable]
+--insertMatrix var [] = [var]
+--
+--insertMatrix (id1, scope1, type1, isConst1, pt1) ((id2, scope2, (ArrayType (arT, ms, cs, (ld : lds))), isConst2, pt2) : tail) =
+--  if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- insertMatrix: array variable (" ++ show (id1, scope1, type1, isConst1, pt1) ++") already declared *in this scope*!")
+--  else ((id2, scope2, (ArrayType (arT, ms, cs, (ld : lds))), isConst2, pt2) : insertMatrix (id1, scope1, type1, isConst1, pt1) tail)
+--
+--insertMatrix (id1, scope1, type1, isConst1, pt1) ((id2, scope2, vars, isConst2, pt2) : tail) =
+--  (id2, scope2, vars, isConst2, pt2) : insertMatrix (id1, scope1, type1, isConst1, pt1) tail
+--
 -- For types -----------------------
 
 insertTypeOnMem :: Types -> Memory -> Memory

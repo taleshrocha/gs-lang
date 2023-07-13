@@ -24,10 +24,6 @@ stmts = try (do
     liftIO $ print (show s)
     b <- stmts
     return (a ++ b))
-  <|> try (do
-    a <- returnExp 
-    b <- stmts
-    return (a ++ b))
   <|> continueBreakStatement
   <|> expressionStatement
   <|> return []
@@ -456,7 +452,11 @@ functionCall = do
   updateState (cleanMemFromScope (getCurrentScope s))
   s <- getState
   updateState removeScope
-  returnToken
+  s <- getState
+  if getIsExecOn s then (do
+    s <- getState
+    return (getReturn name s))
+  else error "Error on Memory -- functionCall: return not found!"
 
 procedureCall :: ParsecT [Token] Memory IO [Token]
 procedureCall = do

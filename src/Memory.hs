@@ -86,6 +86,14 @@ setReturnAux name tp ((id2, (isOk, retType, retToken), params2, body2) : tail) =
     else error "Error on Memory -- functionCall: wrong return Type!")
   else setReturnAux name tp tail ++ [(id2, (isOk, retType, retToken), params2, body2)]
 
+getReturn :: String -> Memory -> Token
+getReturn name (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getReturnAux name funcTable
+
+getReturnAux :: String -> [Function] -> Token
+getReturnAux name [] = error "Error on Memory -- functionCall: function not found!"
+getReturnAux name ((id2, (isOk, retType, retToken), params2, body2) : tail) =
+  if name == id2 then retToken
+  else getReturnAux name tail
 -- For types -----------------------
 
 insertTypeOnMem :: Types -> Memory -> Memory

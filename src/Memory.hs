@@ -25,7 +25,7 @@ data Types =
   StringType String                       |
   VoidType                                |
   RecordType (String, [(String, Types)])  |
-  ArrayType (String, Int, Int, [Types])  -- name, maxSize, currentSize, load
+  ArrayType (Types, Int, Int, [Types])  -- type, maxSize, currentSize, load
 
 -- Inserts --------------------------------------------------------------------
 
@@ -77,6 +77,22 @@ insertRecord (id1, scope1, type1, isConst1, pt1) ((id2, scope2, RecordType (rid2
 
 insertRecord (id1, scope1, type1, isConst1, pt1) ((id2, scope2, vars, isConst2, pt2) : tail) =
   (id2, scope2, vars, isConst2, pt2) : insertRecord (id1, scope1, type1, isConst1, pt1) tail
+
+-- For arrays -----------------------
+
+insertArrOnMem :: Variable -> Memory -> Memory
+insertArrOnMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, insertArray var varTable, funcTable, typeTable, isOn)
+
+insertArray :: Variable -> [Variable] -> [Variable]
+insertArray var [] = [var]
+
+insertArray (id1, scope1, type1, isConst1, pt1) ((id2, scope2, (ArrayType (arT, ms, cs, (ld : lds))), isConst2, pt2) : tail) =
+  if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- insertArray: array variable (" ++ show (id1, scope1, type1, isConst1, pt1) ++") already declared *in this scope*!")
+  else ((id2, scope2, (ArrayType (arT, ms, cs, (ld : lds))), isConst2, pt2) : insertArray (id1, scope1, type1, isConst1, pt1) tail)
+
+insertArray (id1, scope1, type1, isConst1, pt1) ((id2, scope2, vars, isConst2, pt2) : tail) =
+  (id2, scope2, vars, isConst2, pt2) : insertArray (id1, scope1, type1, isConst1, pt1) tail
 
 -- For types -----------------------
 
@@ -232,13 +248,15 @@ getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
 
--- TODO add this to getDefaultValue
 getDefaultRecordValue :: Token -> Memory -> Types
 getDefaultRecordValue (Id id p) (_, _, _, _, [], _) = error ("Error on Memory -- getDefautValue: variable no such type (" ++ show (Id id p) ++ ") *in this scope*!")
 
 getDefaultRecordValue (Id id1 pos1) (currentScope, scopes, vars, funcs, RecordType (id2, fd) : tail, isExecFn) =
   if id1 == id2 then RecordType (id1, fd)
   else getDefaultRecordValue (Id id1 pos1) (currentScope, scopes, vars, funcs, tail, isExecFn)
+
+getDefaultArrayValue :: Types -> Types
+getDefaultArrayValue (ArrayType (t, v, i, [])) = ArrayType (t, v, i, replicate v (t))
 
 getBoolValue :: Token -> Bool
 getBoolValue (Bool value pos) = value

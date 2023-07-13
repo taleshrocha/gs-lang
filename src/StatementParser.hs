@@ -81,57 +81,77 @@ varDecl = do
     Nothing -> do
       t <- typeToken
       (Id name p) <- idToken
-      s <- getState
-      b <- optionMaybe assignToken
-      case b of
-        Just b -> do
-          exp <- expression
-          co <- optionMaybe commaToken
-          case co of
-            Just co -> (do
-              s <- getState
-              st <- try varDecl <|> varDeclRemaining t
-              when (getIsExecOn s) (do
-                updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False))))
-              case ct of
-                Just ct  -> return (ct : t : Id name p : b : exp : co : st)
-                Nothing -> return (t : Id name p : b : exp : co : st))
-
-            Nothing -> (do
-              e <- semicolonToken
-              s <- getState
-              when (getIsExecOn s) (do
-                updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False)))
-                --s <- getState
-                --liftIO $ print s
-                )
-              case ct of
-                Just ct  -> return (ct : t : Id name p : b : exp : [e])
-                Nothing -> return (t : Id name p : b : exp : [e]))
+      bl <- optionMaybe bracketLToken
+      case bl of
+        Just bl -> do
+          (Int v p) <- intToken
+          br <- bracketRToken
+          e <- semicolonToken
+          s <- getState
+          when (getIsExecOn s) (do
+            updateState (
+              insertArrOnMem (name, getCurrentScope s
+              , getDefaultArrayValue (ArrayType (getDefaultValue t, v, 0, []))
+              , isConst, ("", 0, False)))
+            --s <- getState
+            --liftIO $ print s
+            )
+          case ct of
+            Just ct  -> return ((Id name p) : ct : bl : (Int v p) : br : (Id name p) : [e])
+            Nothing -> return ((Id name p) : bl : (Int v p) : br : (Id name p) : [e])
 
         Nothing -> do
-          co <- optionMaybe commaToken
-          case co of
-            Just co -> (do
-              s <- getState
-              st <- try varDecl <|> varDeclRemaining t
-              when (getIsExecOn s) (do
-                updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
-              case ct of
-                Just ct  -> return (ct : t : Id name p : co : st)
-                Nothing -> return (t : Id name p : co : st))
+          s <- getState
+          b <- optionMaybe assignToken
+          case b of
+            Just b -> do
+              exp <- expression
+              co <- optionMaybe commaToken
+              case co of
+                Just co -> (do
+                  s <- getState
+                  st <- try varDecl <|> varDeclRemaining t
+                  when (getIsExecOn s) (do
+                    updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False))))
+                  case ct of
+                    Just ct  -> return (ct : t : Id name p : b : exp : co : st)
+                    Nothing -> return (t : Id name p : b : exp : co : st))
 
-            Nothing -> (do
-              e <- semicolonToken
-              s <- getState
-              when (getIsExecOn s) (do
-                updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False)))
-                --s <- getState
-                --liftIO $ print s
-                )
-              case ct of
-                Just ct  -> return (ct : t : Id name p : [e])
-                Nothing -> return (t : Id name p : [e]))
+                Nothing -> (do
+                  e <- semicolonToken
+                  s <- getState
+                  when (getIsExecOn s) (do
+                    updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False)))
+                    --s <- getState
+                    --liftIO $ print s
+                    )
+                  case ct of
+                    Just ct  -> return (ct : t : Id name p : b : exp : [e])
+                    Nothing -> return (t : Id name p : b : exp : [e]))
+
+            Nothing -> do
+              co <- optionMaybe commaToken
+              case co of
+                Just co -> (do
+                  s <- getState
+                  st <- try varDecl <|> varDeclRemaining t
+                  when (getIsExecOn s) (do
+                    updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False))))
+                  case ct of
+                    Just ct  -> return (ct : t : Id name p : co : st)
+                    Nothing -> return (t : Id name p : co : st))
+
+                Nothing -> (do
+                  e <- semicolonToken
+                  s <- getState
+                  when (getIsExecOn s) (do
+                    updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False)))
+                    --s <- getState
+                    --liftIO $ print s
+                    )
+                  case ct of
+                    Just ct  -> return (ct : t : Id name p : [e])
+                    Nothing -> return (t : Id name p : [e]))
 
 varDeclRemaining :: Token -> ParsecT [Token] Memory IO [Token]
 varDeclRemaining t@(Type _ _) = do
@@ -549,6 +569,13 @@ functionCall = do
   s <- getState
   updateState removeScope
   returnToken
+
+--recordCall :: ParsecT [Token] Memory IO Token
+--recordCall = do
+--  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "recordCall"
+--  id1 <- idToken
+--  dot <- dotToken
+--  id2 <- idToken
 
 procedureCall :: ParsecT [Token] Memory IO [Token]
 procedureCall = do

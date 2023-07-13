@@ -48,6 +48,19 @@ insertVariable type2 (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, type3, 
   if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- insertVariable: variable (" ++ show (id1, scope1, type1, isConst1) ++") already declared *in this scope*!")
   else insertVariable type2 (id1, scope1, type1, isConst1, ptr1) tail ++ [(id2, scope2, type3, isConst2, ptr)]
 
+
+insertRecOnMem :: Variable -> Memory -> Memory
+insertRecOnMem var (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, insertRecord var varTable, funcTable, typeTable, isOn)
+
+insertRecord :: Variable -> [Variable] -> [Variable]
+insertRecord var [] = [var]
+
+insertRecord (id1, scope1, type1, isConst1, pt1) ((id2, scope2, RecordType (rid2, (fName2, fType2) : fds2), isConst2, pt2) : tail) =
+  -- See if the variable exists
+  if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- insertRecord: variable (" ++ show (id1, scope1, type1, isConst1, pt1) ++") already declared *in this scope*!")
+  else [(id2, scope2, RecordType (rid2, (fName2, fType2) : fds2), isConst2, pt2)] ++ insertRecord (id1, scope1, type1, isConst1, pt1) tail
+
 -- For Functions -----------------------
 
 insertFunctionOnMem :: Function -> Memory -> Memory
@@ -66,6 +79,26 @@ getFunctionBody name (currentScope, scopes, varTable, (funcName, ret, params, bo
   | name == funcName = body
   | null tail = error ("Error on Memory -- getFunctionBody: function (" ++ show name ++ ") not declared!")
   | otherwise = getFunctionBody name (currentScope, scopes, varTable, tail, typeTable, isOn)
+
+-- For types -----------------------
+
+insertTypeOnMem :: Types -> Memory -> Memory
+insertTypeOnMem userType (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, varTable, funcTable, insertType userType typeTable, isOn)
+
+insertType :: Types -> [Types] -> [Types]
+insertType userType [] = [userType]
+insertType (RecordType (id1, fields1)) ((RecordType (id2, fields2)) : tail) =
+  if id1 == id2 then error "Error: record already exists!"
+  else (RecordType (id2, fields2)) : insertType (RecordType (id1, fields1)) tail
+
+--insertFields :: String -> (Types, String) -> Memory -> Memory
+--insertFields id1 (type1, name1) (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+--  if id1 == id2 then ((RecordType (id2, fields2)) : tail)
+--  else (RecordType (id2, fields2)) : insertType (RecordType (id1, fields1)) tail
+
+
+  --then error "Error: record " ++ id1 ++ ", " ++ fields1 ++ " already exists!"
 
 -- For Scope -----------------------
 
@@ -168,6 +201,14 @@ getDefaultValue (Type "float" (l, c)) = FloatType 0.0
 getDefaultValue (Type "bool" (l, c)) = BoolType False
 getDefaultValue (Type "char" (l, c)) = CharType 'a'
 getDefaultValue (Type "string" (l, c)) = StringType ""
+
+-- TODO add this to getDefaultValue
+getDefaultRecordValue :: Token -> Memory -> Types
+getDefaultRecordValue (Id id p) (_, _, _, _, [], _) = error ("Error on Memory -- getDefautValue: variable no such type (" ++ show (Id id p) ++ ") *in this scope*!")
+
+getDefaultRecordValue (Id id1 pos1) (currentScope, scopes, vars, funcs, RecordType (id2, fd) : tail, isExecFn) =
+  if id1 == id2 then RecordType (id1, fd)
+  else getDefaultRecordValue (Id id1 pos1) (currentScope, scopes, vars, funcs, tail, isExecFn)
 
 getBoolValue :: Token -> Bool
 getBoolValue (Bool value pos) = value

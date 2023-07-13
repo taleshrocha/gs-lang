@@ -38,7 +38,6 @@ evalUnary _ (SubUnary p) (Float y _) = Float (y - 1) p
 
 evalUnary _ _ _ = error "Error on evalUnary: cannot match types!"
 
-
 eval :: Memory -> Token -> Token -> Token -> Token
 eval mem (Id id1 p1) opToken (Id id2 p2) = eval mem (idTokenToTypeToken (Id id1 p1) (getCurrentScope mem) (getVariables mem)) opToken (idTokenToTypeToken (Id id2 p2) (getCurrentScope mem) (getVariables mem))
 eval mem (Id id p) opToken typeToken = eval mem (idTokenToTypeToken (Id id p) (getCurrentScope mem) (getVariables mem)) opToken typeToken

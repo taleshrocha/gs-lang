@@ -18,7 +18,7 @@ parser tokens = runParserT program (0, [], [], [], [], True) "Error message" tok
 
 program :: ParsecT [Token] Memory IO [Token]
 program = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "program"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "program"
   s <- getState
   updateState ( insertScope (getCurrentScope s) )
   a <- preMain
@@ -27,7 +27,7 @@ program = do
 
 mainProgram :: ParsecT [Token] Memory IO [Token]
 mainProgram = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "mainProgram"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "mainProgram"
   t <- typeToken
   m1 <- mainToken
   s <- getState
@@ -43,7 +43,7 @@ mainProgram = do
 
 preMain :: ParsecT [Token] Memory IO [Token]
 preMain = try (do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "preMain"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "preMain"
   a <- function <|> procedure <|> record <|> varDecl
   b <- preMain
   return (a ++ b)) <|> return []
@@ -75,7 +75,7 @@ function = do
 
 procedure :: ParsecT [Token] Memory IO [Token]
 procedure = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "procedure"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "procedure"
   prod <- procedureToken
   (Id name p) <- idToken
   pl <- parLToken
@@ -98,9 +98,9 @@ procedure = do
     funt <- procedureToken
     return (prod : Id name p : pl : pa ++ pr : st ++ et : [funt]))
 
-record :: ParsecT [Token] Memory IO ([Token])
+record :: ParsecT [Token] Memory IO [Token]
 record = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "record"
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "Parser" "Call" "record"
   rt1 <- recordToken 
   (Id name p) <- idToken 
   b <- beginToken
@@ -112,4 +112,4 @@ record = do
   modifyState (insertTypeOnMem (RecordType (name, fields)))
   s <- getState
   liftIO $ print s
-  return (rt1 : (Id name p) : b : e : [rt2])
+  return (rt1 : Id name p : b : e : [rt2])

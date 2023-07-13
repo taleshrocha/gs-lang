@@ -59,13 +59,7 @@ insertFunction func [] = [func]
 
 insertFunction (id1, return1, params1, body1) ((id2, return2, params2, body2) : tail) =
   if id1 == id2 then error "Error: function already exists!"
-  else (id2, return2, params2, body2) : insertFunction (id1, return1, params1, body1) tail
-
-getFunctionBody :: String -> Memory -> [Token]
-getFunctionBody name (currentScope, scopes, varTable, (funcName, ret, params, body) : tail, typeTable, isOn)
-  | name == funcName = body
-  | null tail = error ("Error on Memory -- getFunctionBody: function (" ++ show name ++ ") not declared!")
-  | otherwise = getFunctionBody name (currentScope, scopes, varTable, tail, typeTable, isOn)
+  else insertFunction (id1, return1, params1, body1) tail ++ [(id2, return2, params2, body2)]
 
 -- For Records -----------------------
 
@@ -91,7 +85,7 @@ insertType :: Types -> [Types] -> [Types]
 insertType userType [] = [userType]
 insertType (RecordType (id1, fields1)) ((RecordType (id2, fields2)) : tail) =
   if id1 == id2 then error "Error: record already exists!"
-  else (RecordType (id2, fields2)) : insertType (RecordType (id1, fields1)) tail
+  else insertType (RecordType (id1, fields1)) tail ++ [(RecordType (id2, fields2))]
 
 -- For Scope -----------------------
 
@@ -102,6 +96,12 @@ insertScope scope (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
 removeScope :: Memory -> Memory
 removeScope (currentScope, scope : scopes, varTable, funcTable, typeTable, isOn) =
   (head scopes, scopes, varTable, funcTable, typeTable, isOn)
+
+getFunctionBody :: String -> Memory -> [Token]
+getFunctionBody name (currentScope, scopes, varTable, (funcName, ret, params, body) : tail, typeTable, isOn)
+  | name == funcName = body
+  | null tail = error ("Error on Memory -- getFunctionBody: function (" ++ show name ++ ") not declared!")
+  | otherwise = getFunctionBody name (currentScope, scopes, varTable, tail, typeTable, isOn)
 
 -- Updates --------------------------------------------------------------------
 
@@ -121,7 +121,7 @@ updateVariable mem (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, type2, is
           if ptrTru then (do
             let mem2 = updateVarOnMem (ptrId, ptrScp, type1, isConst2, ("",0,False)) mem
             getVariables (updateVarOnMem (id1, scope1, type1, isConst1, ptr1) mem2))
-          else return (id1, scope2, convertTypes type1 type2, isConst2, (ptrId, ptrScp, ptrTru))
+          else (id2, scope2, convertTypes type1 type2, isConst2, (ptrId, ptrScp, ptrTru)) : tail
       else error ("Error on Memory -- updateVariable: variable "
         ++ show (id2, scope2, type2, isConst2)
         ++ " is not compatible with Type "
@@ -186,10 +186,10 @@ removeVariable (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, type2, isCons
 
 ---- Getters ------------------------------------------------------------------
 
-getVariableMem :: String -> Int -> Memory -> Variable
-getVariableMem tk i (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getVariable tk i varTable
+getVariableMem :: String -> Scope -> Memory -> Variable
+getVariableMem tk sco (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getVariable tk sco varTable
 
-getVariable :: String -> Int -> [Variable] -> Variable
+getVariable :: String -> Scope -> [Variable] -> Variable
 getVariable var sc [] = error ("Error on Memory -- getVariable: variable (" ++ show var ++ ") not declared!")
 
 getVariable id scope ((id2, scope2, type2, is_const, ptr) : tail) =

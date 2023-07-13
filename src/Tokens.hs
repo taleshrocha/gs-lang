@@ -121,6 +121,11 @@ colonToken = tokenPrim show update_pos get_token where
   get_token (Colon p) = Just (Colon p)
   get_token _ = Nothing
 
+dotToken :: ParsecT [Token] st IO Token
+dotToken = tokenPrim show update_pos get_token where
+  get_token (Dot p) = Just (Dot p)
+  get_token _ = Nothing
+
 semicolonToken :: ParsecT [Token] st IO Token
 semicolonToken = tokenPrim show update_pos get_token where
   get_token (SemiColon p) = Just (SemiColon p)

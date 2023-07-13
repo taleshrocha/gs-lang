@@ -1,16 +1,14 @@
-//record rational_t begin
-//  int numerador;
-//  int denominador;
-//end record
+record rational_t begin
+  int numerador := 2;
+  int denominador := 15;
+end record
 
 int main() begin
-  //record rational_t rational;
-  //int a := 2;
-  //print(a);
+  record rational_t rational;
 
-  //rational.numerador := 0;
-  //rational.denominador := 1;
+  rational.numerador := 2;
 
-  //print(rational.numerador, ratinal.denominador);
+  int b := rational.numerador;
+  print(b);
 
 end main

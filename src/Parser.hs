@@ -12,6 +12,7 @@ import Text.Parsec
 import Control.Monad.IO.Class
 import Data.IntMap (update)
 import Text.Printf (printf)
+import Data.List (find)
 
 parser :: [Token] -> IO (Either ParseError [Token])
 parser tokens = runParserT program (0, [], [], [], [], True) "Error message" tokens
@@ -114,9 +115,20 @@ record = do
 
   fields <- fieldsParser -- TODO check if all the fields have diferent names
 
-  e <- endToken 
-  rt2 <- recordToken 
-  modifyState (insertTypeOnMem (RecordType (name, fields)))
-  s <- getState
-  liftIO $ print s
-  return (rt1 : Id name p : b : e : [rt2])
+  if hasRepeatedFields fields then
+    error ("Error on Parser -- fieldsParser: duplicates fields")
+
+  else do
+    e <- endToken 
+    rt2 <- recordToken 
+    modifyState (insertTypeOnMem (RecordType (name, fields)))
+    s <- getState
+    liftIO $ print s
+    return (rt1 : Id name p : b : e : [rt2])
+  where
+    hasRepeatedFields :: [(String, Types)] -> Bool
+    hasRepeatedFields [] = False
+    hasRepeatedFields ((name, _):rest) =
+      case find ((== name) . fst) rest of
+        Just _ -> True
+        Nothing -> hasRepeatedFields rest

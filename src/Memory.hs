@@ -182,6 +182,31 @@ updateFields fName1 (id1, scope1, type1, isConst1, ptr1) ((fName2, fType2) : fds
   else 
     ((fName2, fType2) : updateFields fName1 (id1, scope1, type1, isConst1, ptr1) fds2)
 
+-- For Arrays -----------------------
+
+updateArrOnMem :: Variable -> Int -> Memory -> Memory
+updateArrOnMem var idx (currentScope, scopes, varTable, funcTable, typeTable, isOn) =
+  (currentScope, scopes, updateArray var idx varTable, funcTable, typeTable, isOn)
+
+updateArray :: Variable -> Int -> [Variable] -> [Variable]
+updateArray var idx [] = error ("Error on Memory -- updateArray: variable (" ++ show var ++ ") not declared!")
+
+updateArray (id1, scope1, type1, isConst1, ptr1) idx ((id2, scope2, (ArrayType (ts, v, i, vals)), isConst2, ptr2) : tail) =
+  if id1 == id2 && scope1 == scope2 then
+    if isConst2 == True then error ("Error on Memory -- updateArray: trying to change the value of the constant!")
+    else do
+      let type2 = getElement vals idx
+      if compatible type1 type2 then (id1, scope1, (ArrayType (ts, v, i, (addElementAtIndex (convertTypes type1 type2) idx vals))), isConst2, ptr1) : tail
+      else error ("Error on Memory -- updateArray: variable"
+        ++ " is not compatible"
+        ++ ".")
+  else (id2, scope2, (ArrayType (ts, v, i, vals)), isConst2, ptr2) : updateArray (id1, scope1, type1, isConst1, ptr1) idx tail
+
+addElementAtIndex :: Types -> Int -> [Types] -> [Types]
+addElementAtIndex value index list
+  | index >= length list = error "Index is out of range."
+  | otherwise = take index list ++ [value] ++ drop (index + 1) list
+
     
 -- Removes --------------------------------------------------------------------
 
@@ -216,6 +241,59 @@ getVariable var sc [] = error ("Error on Memory -- getVariable: variable (" ++ s
 getVariable id scope ((id2, scope2, type2, is_const, ptr) : tail) =
   if id == id2 && scope >= scope2 then (id2, scope2, type2, is_const, ptr)
   else getVariable id scope tail
+
+
+
+getRecMem :: String -> String -> Scope -> Memory -> Token
+getRecMem id1 id2 sc (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getRecord id1 id2 sc varTable
+
+getRecord :: String -> String -> Scope -> [Variable] -> Token
+getRecord id1 id2 sc [] = error ("Error on Memory -- getRecord: record (" ++ show id1 ++ ") not declared!")
+
+getRecord id1 id2 scope ((id3, scope3, RecordType (rid3, fields), isConst3, ptr) : tail) =
+  if id1 == id3 && scope >= scope3 then getFields id2 fields
+  else getRecord id1 id2 scope tail
+
+getRecord id1 id2 sc (var2 : vars) = getRecord id1 id2 sc vars
+
+getFields :: String -> [(String, Types)] -> Token
+getFields _ [] = error ("Error on Memory -- getFields: field not found!")
+getFields fName1 ((fName2, fType2) : fds2) =
+  if fName1 == fName2 then toToken fType2
+  else getFields fName1  fds2
+
+
+
+getArrMem :: String -> Int -> Scope -> Memory -> Token
+getArrMem id1 i sc (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getArray id1 i sc varTable
+
+getArray :: String -> Int -> Scope -> [Variable] -> Token
+getArray id1 i sc [] = error ("Error on Memory -- getArray: record (" ++ show id1 ++ ") not declared!")
+
+getArray id1 i scope ((id3, scope3, ArrayType (type1, sz, cs, vals ), isConst3, ptr) : tail) =
+  if id1 == id3 && scope >= scope3 then toToken (getElement vals i)
+  else getArray id1 i scope tail
+
+getArray id1 i sc (var2 : vars) = getArray id1 i sc vars
+
+getElement :: [Types] -> Int -> Types
+getElement (h : l) i = 
+  if(i == 0) then h
+  else getElement l (i-1)
+
+getElement [h] i = 
+  if(i == 0) then h
+  else
+    error "Something unexpected happened"
+
+getElement [] i = error "Out of index"
+
+
+toToken :: Types -> Token
+toToken (IntType value) = (Int value (0, 0))
+toToken (FloatType value) = (Float value (0, 0)) 
+toToken (BoolType value) = (Bool value (0, 0))
+toToken (StringType value) = (String value (0, 0))
 
 getType :: Token -> Memory -> Types
 getType tkn (currentScope, scopes, varTable, funcTable, typeTable, isOn) = getTypeAux tkn currentScope varTable

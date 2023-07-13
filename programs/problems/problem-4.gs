@@ -9,5 +9,6 @@ int main() begin
   rational.numerador := 2;
 
   int b := rational.numerador;
+  print(b);
 
 end main

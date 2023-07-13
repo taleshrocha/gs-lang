@@ -260,22 +260,35 @@ assign = do
         )
       return (Id name p : dot : (Id fName p) : exp : [d])
     Nothing -> do
-      b <- assignToken
-      exp <- expression
-      co <- optionMaybe commaToken
-      case co of
-        Just co -> do
-          s <- getState
-          when (getIsExecOn s) (do
-            updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False, ("",0,False))))
-          st <- assign
-          return (Id name p : b : exp : co : st)
-        Nothing -> do
+      bl <- optionMaybe bracketLToken
+      case bl of
+        Just bl -> do
+          (Int v p) <- intToken
+          br <- bracketRToken
+          b <- assignToken
+          exp <- exprs
           d <- semicolonToken
           s <- getState
           when (getIsExecOn s) (do
-            updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False, ("",0,False))))
-          return (Id name p : b : exp : [d])
+            updateState (updateArrOnMem(name, getCurrentScope s, getType exp s, False, ("", 0, False)) v))
+          return (bl : (Int v p) : br : b : exp : [d])
+        Nothing -> do
+          b <- assignToken
+          exp <- expression
+          co <- optionMaybe commaToken
+          case co of
+            Just co -> do
+              s <- getState
+              when (getIsExecOn s) (do
+                updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False, ("",0,False))))
+              st <- assign
+              return (Id name p : b : exp : co : st)
+            Nothing -> do
+              d <- semicolonToken
+              s <- getState
+              when (getIsExecOn s) (do
+                updateState (updateVarOnMem (name, getCurrentScope s, getType exp s, False, ("",0,False))))
+              return (Id name p : b : exp : [d])
 
 printFun :: ParsecT [Token] Memory IO [Token]
 printFun = try (do
@@ -570,12 +583,24 @@ functionCall = do
   updateState removeScope
   returnToken
 
---recordCall :: ParsecT [Token] Memory IO Token
---recordCall = do
---  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "recordCall"
---  id1 <- idToken
---  dot <- dotToken
---  id2 <- idToken
+recordCall :: ParsecT [Token] Memory IO Token
+recordCall = do
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "recordCall"
+  (Id id1 p) <- idToken
+  dot <- dotToken
+  (Id id2 p) <- idToken
+  st <- getState
+  return (getRecMem id1 id2 (getCurrentScope st) st)
+
+arrayCall :: ParsecT [Token] Memory IO Token
+arrayCall = do
+  -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "arrayCall"
+  (Id id1 p) <- idToken
+  bl <- bracketLToken
+  (Int value p) <- intToken
+  br <- bracketRToken
+  st <- getState
+  return (getArrMem id1 value (getCurrentScope st) st)
 
 procedureCall :: ParsecT [Token] Memory IO [Token]
 procedureCall = do
@@ -686,7 +711,7 @@ factor = try (do
   result) <|> expT
 
 expT :: ParsecT [Token] Memory IO Token
-expT = try functionCall <|> try (do
+expT = try functionCall <|> try recordCall <|> try arrayCall <|> try (do
   -- liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "expT"
   pl <- parLToken
   ex <- expression

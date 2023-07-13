@@ -75,6 +75,9 @@ insertRecord (id1, scope1, type1, isConst1, pt1) ((id2, scope2, RecordType (rid2
   if id1 == id2 && scope1 == scope2 then error ("Error on Memory -- insertRecord: variable (" ++ show (id1, scope1, type1, isConst1, pt1) ++") already declared *in this scope*!")
   else [(id2, scope2, RecordType (rid2, (fName2, fType2) : fds2), isConst2, pt2)] ++ insertRecord (id1, scope1, type1, isConst1, pt1) tail
 
+insertRecord (id1, scope1, type1, isConst1, pt1) ((id2, scope2, vars, isConst2, pt2) : tail) =
+  (id2, scope2, vars, isConst2, pt2) : insertRecord (id1, scope1, type1, isConst1, pt1) tail
+
 -- For types -----------------------
 
 insertTypeOnMem :: Types -> Memory -> Memory
@@ -133,34 +136,36 @@ updateVariable mem (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, type2, is
 -- For Records -----------------------
 
 updateRecOnMem :: String -> Variable -> Memory -> Memory
+
 updateRecOnMem fn var mem@(currentScope, scopes, varTable, funcTable, typeTable, isOn) =
-  (currentScope, scopes, updateRecord mem fn var varTable, funcTable, typeTable, isOn)
+  (currentScope, scopes, updateRecord fn var varTable, funcTable, typeTable, isOn)
 
-updateRecord :: Memory -> String -> Variable -> [Variable] -> [Variable]
-updateRecord mem fn var [] = error ("Error on Memory -- updateRecord: variable (" ++ show var ++ ") not declared!")
 
---updateRecord mem fName1 (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, RecordType (rid2, []), isConst2, (ptrId, ptrScp, ptrTru)) : tail) =
---  error ("Error on Memory -- updateRecord: field (" ++ show fName1 ++ ") not found!")
+updateRecord :: String -> Variable -> [Variable] -> [Variable]
+updateRecord _ _ [] = error "Error on Memory -- updateRecord: variable not declared!"
 
-updateRecord mem fName1 (id1, scope1, type1, isConst1, ptr1) ((id2, scope2, RecordType (rid2, (fName2, fType2) : fds2), isConst2, (ptrId, ptrScp, ptrTru)) : tail)
-  | id1 == id2 && scope1 >= scope2 = 
-    if isConst2 then 
-      error ("Error on Memory -- updateRecord: trying to change the value of the " 
-        ++ show (id2, scope2, RecordType (rid2, (fName2, fType2) : fds2), isConst2, (ptrId, ptrScp, ptrTru)) ++ " constant!")
-    else 
-      return (id2, scope2, RecordType (rid2, (updateFields fName1 (id1, scope1, type1, isConst1, ptr1) ((fName2, fType2) : fds2))), isConst2, (ptrId, ptrScp, ptrTru))
-  | null tail = error ("Error on Memory -- updateRecord: variable (" ++ show (id1, scope1, type1, isConst1) ++ ") not declared!")
-  | otherwise = (id2, scope2, RecordType (rid2, (fName2, fType2) : fds2), isConst2, (ptrId, ptrScp, ptrTru)) : updateRecord mem fName1 (id1, scope1, type1, isConst1, ptr1) tail
+updateRecord fName1 var@(id1, scope1, type1, isConst1, ptr1) (record@(id2, scope2, RecordType (rid2, fields), isConst2, ptr) : tail)
+  | id1 == id2 && scope1 >= scope2 =
+    if isConst2 then
+      error ("Error on Memory -- updateRecord: trying to change the value of the "
+        ++ show record ++ " constant!")
+    else
+      (id2, scope2, RecordType (rid2, updatedFields), isConst2, ptr) : tail
+  | otherwise = record : updateRecord fName1 var tail
+  where
+    updatedFields = updateFields fName1 var fields
+
+updateRecord fName var1 (var2 : vars) = var2 : updateRecord fName var1 vars
 
 updateFields :: String -> Variable -> [(String, Types)] -> [(String, Types)]
-updateFields fName1 (id1, scope1, type1, isConst1, ptr1)  [] = 
-  error ("Error on Memory -- updateField: field (" ++ show fName1 ++ ") not found!")
-
+updateFields _ _ [] =
+  error ("Error on Memory -- updateFields: field not found!")
 updateFields fName1 (id1, scope1, type1, isConst1, ptr1) ((fName2, fType2) : fds2) =
   if fName1 == fName2 && compatible fType2 type1 then
     ((fName2, convertTypes type1 fType2) : fds2)
   else 
     ((fName2, fType2) : updateFields fName1 (id1, scope1, type1, isConst1, ptr1) fds2)
+
     
 -- Removes --------------------------------------------------------------------
 

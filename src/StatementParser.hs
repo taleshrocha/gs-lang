@@ -71,8 +71,8 @@ varDecl = do
       s <- getState
       when (getIsExecOn s) (do
         updateState (insertRecOnMem (name, getCurrentScope s, getDefaultRecordValue t s, isConst, ("",0,False)))
-        s <- getState
-        liftIO $ print s
+        --s <- getState
+        --liftIO $ print s
         )
       case ct of
         Just ct  -> return (ct : t : Id name p : [e])
@@ -102,8 +102,8 @@ varDecl = do
               s <- getState
               when (getIsExecOn s) (do
                 updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getType exp s, isConst, ("",0,False)))
-                s <- getState
-                liftIO $ print s
+                --s <- getState
+                --liftIO $ print s
                 )
               case ct of
                 Just ct  -> return (ct : t : Id name p : b : exp : [e])
@@ -126,8 +126,8 @@ varDecl = do
               s <- getState
               when (getIsExecOn s) (do
                 updateState (insertVariableOnMem (getType t s) (name, getCurrentScope s, getDefaultValue t, isConst, ("",0,False)))
-                s <- getState
-                liftIO $ print s
+                --s <- getState
+                --liftIO $ print s
                 )
               case ct of
                 Just ct  -> return (ct : t : Id name p : [e])
@@ -201,12 +201,22 @@ returnType hasType t1 t2 = do
 
 fieldsParser :: ParsecT [Token] Memory IO [(String, Types)]
 fieldsParser = do
-  liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "fieldsParser"
+  --liftIO $ printf "\n%-20s%-10s%-20s\n" "StatementParser" "Call" "fieldsParser"
   t <- typeToken
   (Id name p) <- idToken
-  e <- semicolonToken
-  fds <- fieldsParser <|> return []
-  return ((name, getDefaultValue t) : fds)
+  asg <- optionMaybe assignToken
+  case asg of
+    Just asg -> do
+      exp <- expression
+      e <- semicolonToken
+      s <- getState
+      fds <- fieldsParser <|> return []
+      return ((name, getType exp s) : fds)
+
+    Nothing -> do
+      e <- semicolonToken
+      fds <- fieldsParser <|> return []
+      return ((name, getDefaultValue t) : fds)
 
 ----- Assign ------------------------------------
 
@@ -223,7 +233,11 @@ assign = do
       d <- semicolonToken
       s <- getState
       when (getIsExecOn s) (do
-        updateState (updateRecOnMem fName (name, getCurrentScope s, getType exp s, False, ("",0,False))))
+        liftIO $ print (fName ++ " " ++ name ++ " " ++ show (getType exp s))
+        updateState (updateRecOnMem fName (name, getCurrentScope s, getType exp s, False, ("",0,False)))
+        --s <- getState
+        --liftIO $ print s
+        )
       return (Id name p : dot : (Id fName p) : exp : [d])
     Nothing -> do
       b <- assignToken
